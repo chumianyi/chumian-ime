@@ -105,7 +105,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                             height: 48,
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                                colors: [AppTheme.primary, AppTheme.secondary],
                               ),
                               borderRadius: BorderRadius.circular(12),
                             ),
@@ -143,7 +143,7 @@ class _DictionaryScreenState extends State<DictionaryScreen> {
                             const Icon(Icons.check_circle, color: Colors.green, size: 32)
                           else
                             IconButton(
-                              icon: const Icon(Icons.download, color: AppTheme.primaryColor),
+                              icon: const Icon(Icons.download, color: AppTheme.primary),
                               onPressed: () => _downloadDictionary(dict),
                             ),
                         ],

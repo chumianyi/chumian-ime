@@ -126,7 +126,7 @@ class _AccountScreenState extends State<AccountScreen> {
                   height: 64,
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
-                      colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                      colors: [AppTheme.primary, AppTheme.secondary],
                     ),
                     borderRadius: BorderRadius.circular(32),
                   ),
@@ -146,7 +146,7 @@ class _AccountScreenState extends State<AccountScreen> {
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          const Icon(Icons.pets, color: AppTheme.accentColor, size: 18),
+                          const Icon(Icons.pets, color: AppTheme.accent, size: 18),
                           const SizedBox(width: 4),
                           Text('${api.meowCoins} 喵喵币', style: const TextStyle(fontSize: 14)),
                         ],
@@ -162,7 +162,7 @@ class _AccountScreenState extends State<AccountScreen> {
           // 签到
           GlassContainer(
             child: ListTile(
-              leading: const Icon(Icons.calendar_today, color: AppTheme.primaryColor),
+              leading: const Icon(Icons.calendar_today, color: AppTheme.primary),
               title: const Text('每日签到'),
               subtitle: const Text('签到获得1喵喵币'),
               trailing: ElevatedButton(
@@ -203,7 +203,7 @@ class _AccountScreenState extends State<AccountScreen> {
           // 已购皮肤
           GlassContainer(
             child: const ListTile(
-              leading: Icon(Icons.palette, color: AppTheme.primaryColor),
+              leading: Icon(Icons.palette, color: AppTheme.primary),
               title: Text('已购皮肤'),
               subtitle: Text('查看已购买的皮肤'),
               trailing: Icon(Icons.chevron_right),
@@ -236,7 +236,7 @@ class _StatColumn extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryColor)),
+        Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primary)),
         const SizedBox(height: 4),
         Text(label, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
       ],

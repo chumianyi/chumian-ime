@@ -66,7 +66,7 @@ class _KeyboardManagementScreenState extends State<KeyboardManagementScreen> {
                     height: 48,
                     decoration: BoxDecoration(
                       gradient: const LinearGradient(
-                        colors: [AppTheme.primaryColor, AppTheme.secondaryColor],
+                        colors: [AppTheme.primary, AppTheme.secondary],
                       ),
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -90,7 +90,7 @@ class _KeyboardManagementScreenState extends State<KeyboardManagementScreen> {
                         _keyboards[entry.key] = value;
                       });
                     },
-                    activeColor: AppTheme.primaryColor,
+                    activeColor: AppTheme.primary,
                   ),
                 ],
               ),
@@ -133,13 +133,13 @@ class _SettingTileState extends State<_SettingTile> {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(widget.icon, color: AppTheme.primaryColor),
+      leading: Icon(widget.icon, color: AppTheme.primary),
       title: Text(widget.title),
       subtitle: Text(widget.subtitle, style: const TextStyle(fontSize: 12)),
       trailing: Switch(
         value: _enabled,
         onChanged: (v) => setState(() => _enabled = v),
-        activeColor: AppTheme.primaryColor,
+        activeColor: AppTheme.primary,
       ),
     );
   }

@@ -65,7 +65,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen> {
                   borderRadius: 20,
                   child: Row(
                     children: [
-                      const Icon(Icons.pets, color: AppTheme.accentColor, size: 18),
+                      const Icon(Icons.pets, color: AppTheme.accent, size: 18),
                       const SizedBox(width: 4),
                       Text('${api.meowCoins}', style: const TextStyle(fontWeight: FontWeight.bold)),
                     ],
@@ -140,7 +140,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen> {
                           else
                             Row(
                               children: [
-                                const Icon(Icons.pets, color: AppTheme.accentColor, size: 14),
+                                const Icon(Icons.pets, color: AppTheme.accent, size: 14),
                                 Text(' ${skin['price']}', style: const TextStyle(fontSize: 12)),
                               ],
                             ),
@@ -170,7 +170,7 @@ class _SkinStoreScreenState extends State<SkinStoreScreen> {
                                     },
                               style: ElevatedButton.styleFrom(
                                 padding: const EdgeInsets.symmetric(horizontal: 12),
-                                backgroundColor: isOwned ? Colors.grey : AppTheme.primaryColor,
+                                backgroundColor: isOwned ? Colors.grey : AppTheme.primary,
                               ),
                               child: Text(isOwned ? '应用' : '购买', style: const TextStyle(fontSize: 11)),
                             ),

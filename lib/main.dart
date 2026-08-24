@@ -13,22 +13,13 @@ class ChumianIMEApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => ApiService()),
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
-      ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
-          return MaterialApp(
-            title: '初眠输入法',
-            debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
-            themeMode: themeProvider.themeMode,
-            home: const HomeScreen(),
-          );
-        },
+    return ChangeNotifierProvider(
+      create: (_) => ApiService(),
+      child: MaterialApp(
+        title: '初眠输入法',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.theme,
+        home: const HomeScreen(),
       ),
     );
   }

@@ -46,7 +46,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   subtitle: Slider(
                     value: _keyboardHeight,
                     onChanged: (v) => setState(() => _keyboardHeight = v),
-                    activeColor: AppTheme.primaryColor,
+                    activeColor: AppTheme.primary,
                   ),
                 ),
               ],
@@ -97,14 +97,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: const [
                 ListTile(
-                  leading: Icon(Icons.mic, color: AppTheme.primaryColor),
+                  leading: Icon(Icons.mic, color: AppTheme.primary),
                   title: Text('在线语音识别'),
                   subtitle: Text('使用免费API进行语音转文字'),
                   trailing: Icon(Icons.chevron_right),
                 ),
                 Divider(),
                 ListTile(
-                  leading: Icon(Icons.mic_off, color: AppTheme.primaryColor),
+                  leading: Icon(Icons.mic_off, color: AppTheme.primary),
                   title: Text('本地语音识别'),
                   subtitle: Text('离线语音识别模型'),
                   trailing: Icon(Icons.chevron_right),
@@ -120,13 +120,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             child: Column(
               children: [
                 const ListTile(
-                  leading: Icon(Icons.info, color: AppTheme.primaryColor),
+                  leading: Icon(Icons.info, color: AppTheme.primary),
                   title: Text('版本'),
                   subtitle: Text('初眠输入法 v1.0.0'),
                 ),
                 const Divider(),
                 ListTile(
-                  leading: const Icon(Icons.update, color: AppTheme.primaryColor),
+                  leading: const Icon(Icons.update, color: AppTheme.primary),
                   title: const Text('检查更新'),
                   onTap: () {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -136,7 +136,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const Divider(),
                 const ListTile(
-                  leading: Icon(Icons.privacy_tip, color: AppTheme.primaryColor),
+                  leading: Icon(Icons.privacy_tip, color: AppTheme.primary),
                   title: Text('隐私政策'),
                   trailing: Icon(Icons.chevron_right),
                 ),
