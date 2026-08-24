@@ -32,7 +32,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: glassLight,
         elevation: 8,
         shape: RoundedRectangleBorder(
@@ -73,7 +73,7 @@ class AppTheme {
         elevation: 0,
         centerTitle: true,
       ),
-      cardTheme: CardThemeData(
+      cardTheme: CardTheme(
         color: glassDark,
         elevation: 8,
         shape: RoundedRectangleBorder(
@@ -247,7 +247,6 @@ class _AuroraBlobState extends State<_AuroraBlob>
         decoration: BoxDecoration(
           color: widget.color,
           shape: BoxShape.circle,
-          blurStyle: BlurStyle.outer,
         ),
       ),
     );

@@ -104,7 +104,7 @@ class _KeyboardManagementScreenState extends State<KeyboardManagementScreen> {
             child: Column(
               children: [
                 _SettingTile(icon: Icons.auto_awesome, title: '输入预测', subtitle: '智能预测下一个字'),
-                _SettingTile(icon: Icons.correct, title: '自动纠错', subtitle: '自动修正输入错误'),
+                _SettingTile(icon: Icons.auto_fix_high, title: '自动纠错', subtitle: '自动修正输入错误'),
                 _SettingTile(icon: Icons.volume_up, title: '按键音效', subtitle: '打字时播放音效'),
                 _SettingTile(icon: Icons.vibration, title: '按键震动', subtitle: '打字时震动反馈'),
                 _SettingTile(icon: Icons.contacts, title: '联系人词库', subtitle: '快速输入联系人姓名'),
