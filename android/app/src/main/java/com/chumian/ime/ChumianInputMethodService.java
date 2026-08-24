@@ -128,22 +128,11 @@ public class ChumianInputMethodService extends InputMethodService
             return;
         }
 
-        // 使用XML键盘
-        int keyboardRes = getResources().getIdentifier("keyboard_qwerty", "xml", getPackageName());
-        if (keyboardRes != 0) {
-            currentKeyboard = new Keyboard(this, keyboardRes);
-        } else {
-            // fallback: 创建简单键盘
-            currentKeyboard = createSimpleKeyboard();
-        }
+        // 使用自定义键盘XML
+        currentKeyboard = new Keyboard(this, R.xml.keyboard_qwerty);
         if (keyboardView != null && currentKeyboard != null) {
             keyboardView.setKeyboard(currentKeyboard);
         }
-    }
-
-    private Keyboard createSimpleKeyboard() {
-        // 使用Android默认键盘布局
-        return new Keyboard(this, android.R.xml.qwerty);
     }
 
     @Override
