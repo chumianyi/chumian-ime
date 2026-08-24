@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -10,7 +9,6 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool _darkMode = false;
   bool _soundEnabled = true;
   bool _vibrationEnabled = true;
   bool _autoCorrect = true;
@@ -19,145 +17,118 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
     return Scaffold(
       appBar: AppBar(title: const Text('设置')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
         children: [
-          // 外观
-          const _SectionTitle(title: '外观'),
-          GlassContainer(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('深色模式'),
-                  subtitle: const Text('跟随系统或手动切换'),
-                  value: _darkMode,
-                  onChanged: (v) {
-                    setState(() => _darkMode = v);
-                    themeProvider.setThemeMode(v ? ThemeMode.dark : ThemeMode.light);
-                  },
+          GroupCard(
+            title: '外观',
+            children: [
+              SimpleTile(
+                icon: Icons.dark_mode,
+                title: '深色模式',
+                subtitle: '跟随系统',
+                iconBg: Colors.grey.withOpacity(0.12),
+                iconColor: Colors.grey,
+                trailing: Switch(value: false, onChanged: (_) {}),
+                showChevron: false,
+              ),
+              const Divider(height: 1, indent: 58),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 30, height: 30,
+                      decoration: BoxDecoration(color: AppTheme.accent.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                      child: const Icon(Icons.height, size: 16, color: AppTheme.accent),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('键盘高度', style: TextStyle(fontSize: 15)),
+                          Slider(
+                            value: _keyboardHeight,
+                            onChanged: (v) => setState(() => _keyboardHeight = v),
+                            activeColor: AppTheme.accent,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                const Divider(),
-                ListTile(
-                  title: const Text('键盘高度'),
-                  subtitle: Slider(
-                    value: _keyboardHeight,
-                    onChanged: (v) => setState(() => _keyboardHeight = v),
-                    activeColor: AppTheme.primary,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-
-          // 输入
-          const _SectionTitle(title: '输入设置'),
-          GlassContainer(
-            child: Column(
-              children: [
-                SwitchListTile(
-                  title: const Text('输入预测'),
-                  subtitle: const Text('智能预测下一个字'),
-                  value: _prediction,
-                  onChanged: (v) => setState(() => _prediction = v),
-                ),
-                const Divider(),
-                SwitchListTile(
-                  title: const Text('自动纠错'),
-                  subtitle: const Text('自动修正输入错误'),
-                  value: _autoCorrect,
-                  onChanged: (v) => setState(() => _autoCorrect = v),
-                ),
-                const Divider(),
-                SwitchListTile(
-                  title: const Text('按键音效'),
-                  subtitle: const Text('打字时播放音效'),
-                  value: _soundEnabled,
-                  onChanged: (v) => setState(() => _soundEnabled = v),
-                ),
-                const Divider(),
-                SwitchListTile(
-                  title: const Text('按键震动'),
-                  subtitle: const Text('打字时震动反馈'),
-                  value: _vibrationEnabled,
-                  onChanged: (v) => setState(() => _vibrationEnabled = v),
-                ),
-              ],
-            ),
+          GroupCard(
+            title: '输入设置',
+            children: [
+              SimpleTile(
+                icon: Icons.auto_awesome,
+                title: '输入预测',
+                iconBg: AppTheme.accent.withOpacity(0.12),
+                iconColor: AppTheme.accent,
+                trailing: Switch(value: _prediction, onChanged: (v) => setState(() => _prediction = v)),
+                showChevron: false,
+              ),
+              const Divider(height: 1, indent: 58),
+              SimpleTile(
+                icon: Icons.check_circle_outline,
+                title: '自动纠错',
+                iconBg: Colors.green.withOpacity(0.12),
+                iconColor: Colors.green,
+                trailing: Switch(value: _autoCorrect, onChanged: (v) => setState(() => _autoCorrect = v)),
+                showChevron: false,
+              ),
+              const Divider(height: 1, indent: 58),
+              SimpleTile(
+                icon: Icons.volume_up,
+                title: '按键音效',
+                iconBg: Colors.orange.withOpacity(0.12),
+                iconColor: Colors.orange,
+                trailing: Switch(value: _soundEnabled, onChanged: (v) => setState(() => _soundEnabled = v)),
+                showChevron: false,
+              ),
+              const Divider(height: 1, indent: 58),
+              SimpleTile(
+                icon: Icons.vibration,
+                title: '按键震动',
+                iconBg: Colors.blue.withOpacity(0.12),
+                iconColor: Colors.blue,
+                trailing: Switch(value: _vibrationEnabled, onChanged: (v) => setState(() => _vibrationEnabled = v)),
+                showChevron: false,
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-
-          // 语音
-          const _SectionTitle(title: '语音输入'),
-          GlassContainer(
-            child: Column(
-              children: const [
-                ListTile(
-                  leading: Icon(Icons.mic, color: AppTheme.primary),
-                  title: Text('在线语音识别'),
-                  subtitle: Text('使用免费API进行语音转文字'),
-                  trailing: Icon(Icons.chevron_right),
-                ),
-                Divider(),
-                ListTile(
-                  leading: Icon(Icons.mic_off, color: AppTheme.primary),
-                  title: Text('本地语音识别'),
-                  subtitle: Text('离线语音识别模型'),
-                  trailing: Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
+          GroupCard(
+            title: '语音输入',
+            children: [
+              SimpleTile(icon: Icons.mic, title: '在线语音识别', subtitle: '免费API语音转文字', iconBg: const Color(0xFFFF3B30).withOpacity(0.12), iconColor: const Color(0xFFFF3B30)),
+              const Divider(height: 1, indent: 58),
+              SimpleTile(icon: Icons.mic_off, title: '本地语音识别', subtitle: '离线识别模型', iconBg: Colors.grey.withOpacity(0.12), iconColor: Colors.grey),
+            ],
           ),
-          const SizedBox(height: 16),
-
-          // 关于
-          const _SectionTitle(title: '关于'),
-          GlassContainer(
-            child: Column(
-              children: [
-                const ListTile(
-                  leading: Icon(Icons.info, color: AppTheme.primary),
-                  title: Text('版本'),
-                  subtitle: Text('初眠输入法 v1.0.0'),
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.update, color: AppTheme.primary),
-                  title: const Text('检查更新'),
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('已是最新版本')),
-                    );
-                  },
-                ),
-                const Divider(),
-                const ListTile(
-                  leading: Icon(Icons.privacy_tip, color: AppTheme.primary),
-                  title: Text('隐私政策'),
-                  trailing: Icon(Icons.chevron_right),
-                ),
-              ],
-            ),
+          GroupCard(
+            title: '关于',
+            children: [
+              SimpleTile(icon: Icons.info, title: '版本', subtitle: '初眠输入法 v1.2.0', iconBg: Colors.grey.withOpacity(0.12), iconColor: Colors.grey, showChevron: false),
+              const Divider(height: 1, indent: 58),
+              SimpleTile(
+                icon: Icons.update,
+                title: '检查更新',
+                iconBg: AppTheme.accent.withOpacity(0.12),
+                iconColor: AppTheme.accent,
+                onTap: () => ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已是最新版本'))),
+              ),
+              const Divider(height: 1, indent: 58),
+              SimpleTile(icon: Icons.privacy_tip, title: '隐私政策', iconBg: Colors.green.withOpacity(0.12), iconColor: Colors.green),
+            ],
           ),
+          const SizedBox(height: 20),
         ],
       ),
-    );
-  }
-}
-
-class _SectionTitle extends StatelessWidget {
-  final String title;
-  const _SectionTitle({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 4, bottom: 8),
-      child: Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
     );
   }
 }

@@ -189,7 +189,7 @@ class _AccountScreenState extends State<AccountScreen> {
                 const SizedBox(height: 12),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: const [
+                  children: [
                     _StatColumn(value: '${api.userStats['total_chars'] ?? 0}', label: '总字数'),
                     _StatColumn(value: '${api.userStats['total_inputs'] ?? 0}', label: '总次数'),
                     _StatColumn(value: '${api.userStats['accuracy'] ?? 100}%', label: '准确率'),
