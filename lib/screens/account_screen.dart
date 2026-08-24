@@ -18,6 +18,15 @@ class _AccountScreenState extends State<AccountScreen> {
   bool _loading = false;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final api = context.read<ApiService>();
+      if (api.isLoggedIn) api.fetchUserStats();
+    });
+  }
+
+  @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
@@ -181,9 +190,9 @@ class _AccountScreenState extends State<AccountScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: const [
-                    _StatColumn(value: '12,345', label: '总字数'),
-                    _StatColumn(value: '567', label: '总次数'),
-                    _StatColumn(value: '98%', label: '准确率'),
+                    _StatColumn(value: '${api.userStats['total_chars'] ?? 0}', label: '总字数'),
+                    _StatColumn(value: '${api.userStats['total_inputs'] ?? 0}', label: '总次数'),
+                    _StatColumn(value: '${api.userStats['accuracy'] ?? 100}%', label: '准确率'),
                   ],
                 ),
               ],

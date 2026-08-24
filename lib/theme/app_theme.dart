@@ -1,254 +1,221 @@
 import 'package:flutter/material.dart';
 
-class ThemeProvider extends ChangeNotifier {
-  ThemeMode _themeMode = ThemeMode.system;
-  ThemeMode get themeMode => _themeMode;
-
-  void setThemeMode(ThemeMode mode) {
-    _themeMode = mode;
-    notifyListeners();
-  }
-}
-
 class AppTheme {
-  static const Color primaryColor = Color(0xFF6C5CE7);
-  static const Color secondaryColor = Color(0xFFA29BFE);
-  static const Color accentColor = Color(0xFFFF7675);
-  static const Color bgLight = Color(0xFFF5F5FA);
-  static const Color bgDark = Color(0xFF1A1A2E);
-  static const Color glassLight = Color(0xCCFFFFFF);
-  static const Color glassDark = Color(0xCC2D2D44);
+  static const Color primary = Color(0xFF000000);
+  static const Color secondary = Color(0xFF8E8E93);
+  static const Color accent = Color(0xFF007AFF);
+  static const Color bg = Color(0xFFF2F2F7);
+  static const Color card = Color(0xFFFFFFFF);
+  static const Color border = Color(0xFFE5E5EA);
+  static const Color grayBg = Color(0xFFE5E5EA);
 
-  static ThemeData get lightTheme {
+  static ThemeData get theme {
     return ThemeData(
       useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: Brightness.light,
+      scaffoldBackgroundColor: bg,
+      colorScheme: const ColorScheme.light(
+        primary: accent,
+        onPrimary: Colors.white,
+        surface: card,
+        onSurface: primary,
       ),
-      scaffoldBackgroundColor: bgLight,
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: bg,
         elevation: 0,
         centerTitle: true,
-      ),
-      cardTheme: CardTheme(
-        color: glassLight,
-        elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+        titleTextStyle: TextStyle(
+          color: primary,
+          fontSize: 17,
+          fontWeight: FontWeight.w600,
         ),
+        iconTheme: IconThemeData(color: primary),
+      ),
+      cardTheme: CardThemeData(
+        color: card,
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: EdgeInsets.zero,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: glassLight,
+        fillColor: grayBg,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(10),
           borderSide: BorderSide.none,
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: accent,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
         ),
       ),
-    );
-  }
-
-  static ThemeData get darkTheme {
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        brightness: Brightness.dark,
-      ),
-      scaffoldBackgroundColor: bgDark,
-      appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+        backgroundColor: card,
+        selectedItemColor: accent,
+        unselectedItemColor: secondary,
+        type: BottomNavigationBarType.fixed,
         elevation: 0,
-        centerTitle: true,
+        selectedLabelStyle: TextStyle(fontSize: 10, fontWeight: FontWeight.w500),
+        unselectedLabelStyle: TextStyle(fontSize: 10),
       ),
-      cardTheme: CardTheme(
-        color: glassDark,
-        elevation: 8,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: glassDark,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-        ),
-      ),
+      dividerTheme: const DividerThemeData(color: border, thickness: 0.5, space: 0),
     );
   }
 }
 
-// 液态玻璃容器
-class GlassContainer extends StatelessWidget {
-  final Widget child;
-  final double borderRadius;
-  final double blur;
-  final EdgeInsetsGeometry? padding;
+// 分组卡片（iOS风格）
+class GroupCard extends StatelessWidget {
+  final List<Widget> children;
+  final String? title;
   final EdgeInsetsGeometry? margin;
-
-  const GlassContainer({
-    super.key,
-    required this.child,
-    this.borderRadius = 20,
-    this.blur = 10,
-    this.padding,
-    this.margin,
-  });
+  const GroupCard({super.key, required this.children, this.title, this.margin});
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: margin,
-      padding: padding ?? const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.glassDark : AppTheme.glassLight,
-        borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: blur,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-}
-
-// Aurora mesh 背景
-class AuroraBackground extends StatelessWidget {
-  final Widget child;
-  const AuroraBackground({super.key, required this.child});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Positioned.fill(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  AppTheme.primaryColor.withOpacity(0.1),
-                  AppTheme.secondaryColor.withOpacity(0.1),
-                  AppTheme.accentColor.withOpacity(0.05),
-                ],
-              ),
+        if (title != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 16, 6),
+            child: Text(
+              title!.toUpperCase(),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: AppTheme.secondary, letterSpacing: 0.3),
             ),
           ),
-        ),
-        // Aurora blobs
-        Positioned(
-          top: -100,
-          left: -50,
-          child: _AuroraBlob(
-            color: AppTheme.primaryColor.withOpacity(0.3),
-            size: 300,
+        Container(
+          margin: margin ?? const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: AppTheme.card,
+            borderRadius: BorderRadius.circular(12),
           ),
+          child: Column(children: children),
         ),
-        Positioned(
-          bottom: -80,
-          right: -60,
-          child: _AuroraBlob(
-            color: AppTheme.secondaryColor.withOpacity(0.25),
-            size: 280,
-          ),
-        ),
-        Positioned(
-          top: 200,
-          right: -40,
-          child: _AuroraBlob(
-            color: AppTheme.accentColor.withOpacity(0.15),
-            size: 200,
-          ),
-        ),
-        child,
       ],
     );
   }
 }
 
-class _AuroraBlob extends StatefulWidget {
-  final Color color;
-  final double size;
-  const _AuroraBlob({required this.color, required this.size});
+// 列表项（iOS风格）
+class SimpleTile extends StatelessWidget {
+  final IconData? icon;
+  final String title;
+  final String? subtitle;
+  final Widget? trailing;
+  final VoidCallback? onTap;
+  final Color? iconBg;
+  final Color? iconColor;
+  final bool showChevron;
 
-  @override
-  State<_AuroraBlob> createState() => _AuroraBlobState();
-}
-
-class _AuroraBlobState extends State<_AuroraBlob>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 8),
-      vsync: this,
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+  const SimpleTile({
+    super.key,
+    this.icon,
+    required this.title,
+    this.subtitle,
+    this.trailing,
+    this.onTap,
+    this.iconBg,
+    this.iconColor,
+    this.showChevron = true,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(
-            20 * _controller.value,
-            15 * (1 - _controller.value),
-          ),
-          child: child,
-        );
-      },
-      child: Container(
-        width: widget.size,
-        height: widget.size,
-        decoration: BoxDecoration(
-          color: widget.color,
-          shape: BoxShape.circle,
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            if (icon != null) ...[
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: iconBg ?? AppTheme.accent.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, size: 16, color: iconColor ?? AppTheme.accent),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w400, color: AppTheme.primary)),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 2),
+                    Text(subtitle!, style: const TextStyle(fontSize: 12, color: AppTheme.secondary)),
+                  ],
+                ],
+              ),
+            ),
+            if (trailing != null) trailing!,
+            if (showChevron && trailing == null && onTap != null)
+              const Icon(Icons.chevron_right, size: 18, color: AppTheme.secondary),
+          ],
         ),
       ),
+    );
+  }
+}
+
+// 功能入口图标
+class FeatureIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+  const FeatureIcon({super.key, required this.icon, required this.label, required this.color, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: color, size: 24),
+          ),
+          const SizedBox(height: 6),
+          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.primary, fontWeight: FontWeight.w400)),
+        ],
+      ),
+    );
+  }
+}
+
+// 兼容层：GlassContainer
+class GlassContainer extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry? padding;
+  final EdgeInsetsGeometry? margin;
+  final double? borderRadius;
+  const GlassContainer({super.key, required this.child, this.padding, this.margin, this.borderRadius});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: margin ?? const EdgeInsets.all(8),
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.card,
+        borderRadius: BorderRadius.circular(borderRadius ?? 12),
+      ),
+      child: child,
     );
   }
 }
