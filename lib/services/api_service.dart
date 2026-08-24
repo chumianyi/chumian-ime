@@ -1,12 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService extends ChangeNotifier {
-  static const String _serverUrl = 'https://chumian-ime.example.com';
-  static const String _cdnUrl = 'https://cdn.chumian-ime.example.com';
+  static const String _serverHost = '103.236.99.177';
+  static const int _serverPort = 24512;
 
   String? _token;
   String? _username;
@@ -37,53 +36,56 @@ class ApiService extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>> _request(String endpoint,
-      {Map<String, dynamic>? body, bool useCdn = false}) async {
+  // UDP请求
+  Future<Map<String, dynamic>> _request(String action, Map<String, dynamic> data) async {
     try {
-      final baseUrl = useCdn ? _cdnUrl : _serverUrl;
-      final url = Uri.parse('$baseUrl$endpoint');
-      final headers = {
-        'Content-Type': 'application/json',
-        if (_token != null) 'Authorization': 'Bearer $_token',
-      };
+      final socket = await RawDatagramSocket.bind(InternetAddress.anyIPv4, 0);
+      final request = jsonEncode({'action': action, 'data': data});
+      socket.send(utf8.encode(request), InternetAddress(_serverHost), _serverPort);
 
-      http.Response response;
-      if (body != null) {
-        response = await http
-            .post(url, headers: headers, body: jsonEncode(body))
-            .timeout(const Duration(seconds: 10));
-      } else {
-        response = await http
-            .get(url, headers: headers)
-            .timeout(const Duration(seconds: 10));
-      }
+      final completer = _UDPCompleter();
+      socket.listen((event) {
+        if (event == RawSocketEvent.read) {
+          final datagram = socket.receive();
+          if (datagram != null) {
+            try {
+              completer.complete(jsonDecode(utf8.decode(datagram.data)));
+            } catch (_) {
+              completer.complete({'error': '网络错误'});
+            }
+            socket.close();
+          }
+        }
+      });
 
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      }
-      return {'error': 'HTTP ${response.statusCode}'};
-    } catch (e) {
-      // CDN失败回源
-      if (useCdn) {
-        return _request(endpoint, body: body, useCdn: false);
-      }
+      final result = await completer.future.timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          socket.close();
+          return {'error': '网络错误'};
+        },
+      );
+      return result;
+    } catch (_) {
       return {'error': '网络错误'};
     }
   }
 
-  // 注册（无需邀请码）
+  // 注册
   Future<bool> register(String username, String password, String inviteCode) async {
-    final result = await _request('/api/register', body: {
+    final result = await _request('register', {
       'username': username,
       'password': password,
     });
     if (result['token'] != null) {
       _token = result['token'];
       _username = username;
+      _meowCoins = result['meow_coins'] ?? 0;
       _isLoggedIn = true;
       final prefs = await SharedPreferences.getInstance();
       prefs.setString('token', _token!);
       prefs.setString('username', username);
+      prefs.setInt('meow_coins', _meowCoins);
       notifyListeners();
       return true;
     }
@@ -92,7 +94,7 @@ class ApiService extends ChangeNotifier {
 
   // 登录
   Future<bool> login(String username, String password) async {
-    final result = await _request('/api/login', body: {
+    final result = await _request('login', {
       'username': username,
       'password': password,
     });
@@ -113,7 +115,7 @@ class ApiService extends ChangeNotifier {
 
   // 签到
   Future<bool> signIn() async {
-    final result = await _request('/api/signin');
+    final result = await _request('signin', {'token': _token});
     if (result['success'] == true) {
       _meowCoins = result['meow_coins'] ?? _meowCoins;
       final prefs = await SharedPreferences.getInstance();
@@ -126,7 +128,7 @@ class ApiService extends ChangeNotifier {
 
   // 获取皮肤列表
   Future<void> fetchSkins() async {
-    final result = await _request('/api/skins', useCdn: true);
+    final result = await _request('get_skins', {'token': _token});
     if (result['skins'] != null) {
       _skins = result['skins'];
       notifyListeners();
@@ -135,7 +137,7 @@ class ApiService extends ChangeNotifier {
 
   // 购买皮肤
   Future<bool> buySkin(String skinId) async {
-    final result = await _request('/api/skins/buy', body: {'skin_id': skinId});
+    final result = await _request('buy_skin', {'token': _token, 'skin_id': skinId});
     if (result['success'] == true) {
       _meowCoins = result['meow_coins'] ?? _meowCoins;
       final prefs = await SharedPreferences.getInstance();
@@ -148,27 +150,21 @@ class ApiService extends ChangeNotifier {
 
   // 获取词库列表
   Future<void> fetchDictionaries() async {
-    final result = await _request('/api/dictionaries', useCdn: true);
+    final result = await _request('get_dictionaries', {});
     if (result['dictionaries'] != null) {
       _dictionaries = result['dictionaries'];
       notifyListeners();
     }
   }
 
-  // 下载词库
-  Future<String?> downloadDictionary(String dictId) async {
-    final result = await _request('/api/dictionaries/$dictId/download', useCdn: true);
-    return result['url'];
-  }
-
   // 统计字数
   Future<void> updateStats(int charCount) async {
-    await _request('/api/stats/update', body: {'char_count': charCount});
+    await _request('update_stats', {'token': _token, 'char_count': charCount});
   }
 
   // 获取用户统计
   Future<void> fetchUserStats() async {
-    final result = await _request('/api/stats');
+    final result = await _request('get_stats', {'token': _token});
     if (result['stats'] != null) {
       _userStats = result['stats'];
       notifyListeners();
@@ -177,7 +173,7 @@ class ApiService extends ChangeNotifier {
 
   // 检查更新
   Future<Map<String, dynamic>> checkUpdate() async {
-    return await _request('/api/update', useCdn: true);
+    return await _request('check_update', {});
   }
 
   // 登出
@@ -192,4 +188,43 @@ class ApiService extends ChangeNotifier {
     prefs.remove('meow_coins');
     notifyListeners();
   }
+}
+
+class _UDPCompleter {
+  final _completer = _SafeCompleter<Map<String, dynamic>>();
+  Future<Map<String, dynamic>> get future => _completer.future;
+  void complete(Map<String, dynamic> value) => _completer.complete(value);
+}
+
+class _SafeCompleter<T> {
+  T? _value;
+  bool _completed = false;
+  final List<Function(T)> _callbacks = [];
+
+  Future<T> get future {
+    return Future<T>(() {
+      if (_completed) return _value as T;
+      final c = _InnerCompleter<T>();
+      _callbacks.add((v) => c.complete(v));
+      return c.future;
+    });
+  }
+
+  void complete(T value) {
+    if (_completed) return;
+    _completed = true;
+    _value = value;
+    for (final cb in _callbacks) {
+      cb(value);
+    }
+  }
+}
+
+class _InnerCompleter<T> {
+  late final Future<T> future;
+  _InnerCompleter() {
+    future = Future<T>(() => _value as T);
+  }
+  T? _value;
+  void complete(T value) => _value = value;
 }

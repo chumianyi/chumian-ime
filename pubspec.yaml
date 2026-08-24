@@ -1,6 +1,6 @@
 name: chumian_ime
-description: 初眠输入法 - 液态玻璃+Aurora mesh+Neumorphism
-version: 1.0.0
+description: 初眠输入法 - 极简白色风格
+version: 1.2.0
 publish_to: 'none'
 
 environment:
@@ -10,7 +10,6 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.1.0
   provider: ^6.1.1
   shared_preferences: ^2.2.0
   cached_network_image: ^3.3.0

@@ -6,636 +6,535 @@ import android.inputmethodservice.KeyboardView;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 import android.graphics.Color;
-import android.util.TypedValue;
+import android.graphics.Typeface;
 import android.view.Gravity;
-import android.widget.HorizontalScrollView;
+import android.view.inputmethod.InputConnection;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ChumianInputMethodService extends InputMethodService
         implements KeyboardView.OnKeyboardActionListener {
 
-    private KeyboardView keyboardView;
-    private Keyboard currentKeyboard;
-    private int currentMode = 0; // 0=拼音,1=英语,2=手写,3=摩斯,4=Emoji,5=随机,6=繁体,7=生僻字
-    private boolean isShift = false;
-    private StringBuilder pinyinBuilder = new StringBuilder();
-    private List<String> candidates = new ArrayList<>();
-    private LinearLayout candidateBar;
-    private HorizontalScrollView candidateScroll;
-    private LinearLayout keyboardContainer;
-    private View handwritingView;
-    private StringBuilder morseBuilder = new StringBuilder();
-    private static final Map<String, String> MORSE_MAP = new HashMap<>();
+    private static final int MODE_QWERTY = 0;
+    private static final int MODE_SYMBOLS = 1;
+    private static final int MODE_NUMBERS = 2;
+    private static final int MODE_HANDWRITING = 3;
+    private static final int MODE_EMOJI = 4;
 
-    static {
-        MORSE_MAP.put(".-","A"); MORSE_MAP.put("-...","B"); MORSE_MAP.put("-.-.","C");
-        MORSE_MAP.put("-..","D"); MORSE_MAP.put(".","E"); MORSE_MAP.put("..-.","F");
-        MORSE_MAP.put("--.","G"); MORSE_MAP.put("....","H"); MORSE_MAP.put("..","I");
-        MORSE_MAP.put(".---","J"); MORSE_MAP.put("-.-","K"); MORSE_MAP.put(".-..","L");
-        MORSE_MAP.put("--","M"); MORSE_MAP.put("-.","N"); MORSE_MAP.put("---","O");
-        MORSE_MAP.put(".--.","P"); MORSE_MAP.put("--.-","Q"); MORSE_MAP.put(".-.","R");
-        MORSE_MAP.put("...","S"); MORSE_MAP.put("-","T"); MORSE_MAP.put("..-","U");
-        MORSE_MAP.put("...-","V"); MORSE_MAP.put(".--","W"); MORSE_MAP.put("-..-","X");
-        MORSE_MAP.put("-.--","Y"); MORSE_MAP.put("--..","Z");
-    }
+    private KeyboardView keyboardView;
+    private Keyboard qwertyKeyboard;
+    private Keyboard symbolsKeyboard;
+    private Keyboard numbersKeyboard;
+    private int currentMode = MODE_QWERTY;
+    private boolean isUpperCase = false;
+    private String composingText = "";
+    private LinearLayout candidateBar;
+    private List<String> candidates = new ArrayList<>();
+    private List<String> handwritingHistory = new ArrayList<>();
+
+    // 拼音映射（简化版）
+    private static final String[][] PINYIN_MAP = {
+        {"a", "啊阿呵吖"}, {"ai", "爱艾唉挨"}, {"an", "安按岸暗"}, {"ang", "昂肮"},
+        {"ao", "奥傲熬凹"}, {"ba", "吧把八爸"}, {"bai", "白百拜败"}, {"ban", "半办班版"},
+        {"bang", "帮棒榜绑"}, {"bao", "包报保宝"}, {"bei", "被北背杯"}, {"ben", "本笨奔"},
+        {"beng", "蹦崩绷"}, {"bi", "比笔必逼"}, {"bian", "边变便遍"}, {"biao", "表标彪"},
+        {"bie", "别憋"}, {"bin", "宾滨彬"}, {"bing", "并病冰兵"}, {"bo", "波博播伯"},
+        {"bu", "不布步部"}, {"ca", "擦嚓"}, {"cai", "才菜财猜"}, {"can", "参残餐惨"},
+        {"cang", "藏仓苍"}, {"cao", "草操曹"}, {"ce", "册测侧策"}, {"ceng", "层曾蹭"},
+        {"cha", "查差插茶"}, {"chai", "拆柴"}, {"chan", "产缠馋"}, {"chang", "长常场唱"},
+        {"chao", "超朝潮炒"}, {"che", "车彻扯"}, {"chen", "沉陈晨衬"}, {"cheng", "成城程称"},
+        {"chi", "吃迟尺持"}, {"chong", "冲虫重充"}, {"chou", "抽愁丑臭"}, {"chu", "出初除处"},
+        {"chuan", "穿传船串"}, {"chuang", "窗床创"}, {"chui", "吹垂锤"}, {"chun", "春纯蠢"},
+        {"chuo", "戳辍"}, {"ci", "此次词刺"}, {"cong", "从聪丛"}, {"cou", "凑"},
+        {"cu", "粗促醋"}, {"cuan", "窜篡"}, {"cui", "催脆翠"}, {"cun", "村存寸"},
+        {"cuo", "错措挫"}, {"da", "大打达答"}, {"dai", "带代待袋"}, {"dan", "但单蛋担"},
+        {"dang", "当党挡荡"}, {"dao", "到道倒刀"}, {"de", "的得德地"}, {"deng", "等灯登瞪"},
+        {"di", "的低地第"}, {"dian", "点电店典"}, {"diao", "掉调吊钓"}, {"die", "跌叠碟"},
+        {"ding", "定顶丁订"}, {"diu", "丢"}, {"dong", "东动懂冬"}, {"dou", "都斗豆抖"},
+        {"du", "度读独毒"}, {"duan", "段短断端"}, {"dui", "对队堆"}, {"dun", "顿吨盾蹲"},
+        {"duo", "多夺朵躲"}, {"e", "饿恶额俄"}, {"en", "恩嗯"}, {"er", "二而儿耳"},
+        {"fa", "发法罚乏"}, {"fan", "反饭番烦"}, {"fang", "方放房防"}, {"fei", "非飞费肥"},
+        {"fen", "分份纷芬"}, {"feng", "风封丰峰"}, {"fo", "佛"}, {"fou", "否"},
+        {"fu", "父服付福"}, {"ga", "嘎噶"}, {"gai", "该改盖概"}, {"gan", "干敢感赶"},
+        {"gang", "刚钢港岗"}, {"gao", "高搞告糕"}, {"ge", "个哥歌各"}, {"gei", "给"},
+        {"gen", "跟根"}, {"geng", "更耕庚"}, {"gong", "工公功共"}, {"gou", "够狗沟购"},
+        {"gu", "古故股骨"}, {"gua", "瓜挂刮寡"}, {"guai", "怪乖拐"}, {"guan", "关管观官"},
+        {"guang", "光广逛"}, {"gui", "贵归鬼规"}, {"gun", "滚棍"}, {"guo", "国过果锅"},
+        {"ha", "哈蛤"}, {"hai", "还海孩害"}, {"han", "汉含寒喊"}, {"hang", "行航杭"},
+        {"hao", "好号浩毫"}, {"he", "和何喝合"}, {"hei", "黑嘿"}, {"hen", "很恨狠"},
+        {"heng", "横恒亨"}, {"hong", "红洪宏轰"}, {"hou", "后厚候猴"}, {"hu", "户湖胡虎"},
+        {"hua", "话花画华"}, {"huai", "坏怀淮"}, {"huan", "还换欢环"}, {"huang", "黄皇荒慌"},
+        {"hui", "会回灰辉"}, {"hun", "婚魂混浑"}, {"huo", "活火或货"}, {"ji", "几机集记"},
+        {"jia", "家加假价"}, {"jian", "见间建件"}, {"jiang", "将江讲奖"}, {"jiao", "叫教交脚"},
+        {"jie", "节结接解"}, {"jin", "进近金今"}, {"jing", "经京精静"}, {"jiong", "窘迥"},
+        {"jiu", "就九久酒"}, {"ju", "句局举巨"}, {"juan", "卷娟眷"}, {"jue", "觉决绝角"},
+        {"jun", "军君均俊"}, {"ka", "卡咖喀"}, {"kai", "开凯慨"}, {"kan", "看砍刊勘"},
+        {"kang", "抗扛康糠"}, {"kao", "考靠烤"}, {"ke", "可课克客"}, {"ken", "肯啃垦"},
+        {"keng", "坑吭"}, {"kong", "空孔控"}, {"kou", "口扣寇"}, {"ku", "苦哭库酷"},
+        {"kua", "夸跨垮"}, {"kuai", "快块筷"}, {"kuan", "宽款"}, {"kuang", "况狂矿框"},
+        {"kui", "亏愧葵"}, {"kun", "困昆捆"}, {"kuo", "扩阔括"}, {"la", "拉啦辣腊"},
+        {"lai", "来赖莱"}, {"lan", "兰蓝懒烂"}, {"lang", "浪狼郎朗"}, {"lao", "老劳牢捞"},
+        {"le", "了乐勒"}, {"lei", "类累雷泪"}, {"leng", "冷愣棱"}, {"li", "里力理立"},
+        {"lia", "俩"}, {"lian", "连脸练联"}, {"liang", "两亮良量"}, {"liao", "了料聊辽"},
+        {"lie", "列烈猎裂"}, {"lin", "林临邻淋"}, {"ling", "领零灵令"}, {"liu", "六留流刘"},
+        {"long", "龙隆笼拢"}, {"lou", "楼漏搂陋"}, {"lu", "路录陆鹿"}, {"lv", "绿律旅虑"},
+        {"luan", "乱卵滦"}, {"lue", "掠略"}, {"lun", "论轮伦"}, {"luo", "落罗络螺"},
+        {"ma", "吗妈马骂"}, {"mai", "买卖麦埋"}, {"man", "满慢漫蛮"}, {"mang", "忙盲芒茫"},
+        {"mao", "毛猫冒帽"}, {"me", "么"}, {"mei", "没美每妹"}, {"men", "们门闷"},
+        {"meng", "梦猛蒙孟"}, {"mi", "米密迷蜜"}, {"mian", "面免棉眠"}, {"miao", "秒妙苗庙"},
+        {"mie", "灭蔑"}, {"min", "民敏闽"}, {"ming", "明名命鸣"}, {"miu", "谬"},
+        {"mo", "摸末墨莫"}, {"mou", "某谋眸"}, {"mu", "母木目牧"}, {"na", "那拿哪呐"},
+        {"nai", "奶耐奈"}, {"nan", "南男难"}, {"nang", "囊馕"}, {"nao", "脑闹恼挠"},
+        {"ne", "呢"}, {"nei", "内馁"}, {"nen", "嫩"}, {"neng", "能"},
+        {"ni", "你泥拟逆"}, {"nian", "年念粘碾"}, {"niang", "娘酿"}, {"niao", "鸟尿"},
+        {"nie", "捏涅镍"}, {"nin", "您"}, {"ning", "宁凝拧"}, {"niu", "牛扭钮"},
+        {"nong", "农浓弄"}, {"nu", "女努怒"}, {"nuan", "暖"}, {"nuo", "诺挪糯"},
+        {"o", "哦噢"}, {"ou", "欧偶呕"}, {"pa", "怕爬帕趴"}, {"pai", "排派拍牌"},
+        {"pan", "盘判盼攀"}, {"pang", "旁胖庞"}, {"pao", "跑炮泡抛"}, {"pei", "配陪培佩"},
+        {"pen", "盆喷"}, {"peng", "朋碰彭捧"}, {"pi", "皮批屁匹"}, {"pian", "片篇偏骗"},
+        {"piao", "票飘漂瓢"}, {"pie", "撇瞥"}, {"pin", "品拼贫频"}, {"ping", "平评瓶凭"},
+        {"po", "破迫坡泼"}, {"pou", "剖"}, {"pu", "普仆铺朴"}, {"qi", "起其气七"},
+        {"qia", "恰洽掐"}, {"qian", "前钱千浅"}, {"qiang", "强抢枪墙"}, {"qiao", "桥巧敲瞧"},
+        {"qie", "切且茄窃"}, {"qin", "亲琴勤秦"}, {"qing", "请情清青"}, {"qiong", "穷琼"},
+        {"qiu", "球求秋丘"}, {"qu", "去取区曲"}, {"quan", "全权利泉"}, {"que", "却确缺雀"},
+        {"qun", "群裙"}, {"ran", "然燃染"}, {"rang", "让嚷壤"}, {"rao", "绕扰饶"},
+        {"re", "热惹"}, {"ren", "人认任忍"}, {"reng", "仍扔"}, {"ri", "日"},
+        {"rong", "容荣融熔"}, {"rou", "肉柔揉"}, {"ru", "如入乳儒"}, {"ruan", "软阮"},
+        {"rui", "瑞锐蕊"}, {"run", "润闰"}, {"ruo", "若弱"}, {"sa", "撒洒萨"},
+        {"sai", "赛塞腮"}, {"san", "三散伞"}, {"sang", "桑丧嗓"}, {"sao", "扫骚嫂"},
+        {"se", "色涩瑟"}, {"sen", "森"}, {"seng", "僧"}, {"sha", "杀沙傻啥"},
+        {"shai", "晒筛"}, {"shan", "山善闪衫"}, {"shang", "上商伤尚"}, {"shao", "少烧稍勺"},
+        {"she", "社设射蛇"}, {"shei", "谁"}, {"shen", "什深身神"}, {"sheng", "生声胜省"},
+        {"shi", "是时十事"}, {"shou", "手收首受"}, {"shu", "书数树熟"}, {"shua", "刷耍"},
+        {"shuai", "帅摔衰"}, {"shuan", "栓拴"}, {"shuang", "双爽霜"}, {"shui", "水睡谁"},
+        {"shun", "顺瞬舜"}, {"shuo", "说硕朔"}, {"si", "四思死私"}, {"song", "送松宋颂"},
+        {"sou", "搜艘嗖"}, {"su", "苏俗速素"}, {"suan", "算酸蒜"}, {"sui", "虽随岁碎"},
+        {"sun", "孙损笋"}, {"suo", "所锁缩索"}, {"ta", "他她它塔"}, {"tai", "太台态抬"},
+        {"tan", "谈弹探叹"}, {"tang", "堂糖唐躺"}, {"tao", "套逃桃淘"}, {"te", "特"},
+        {"teng", "疼腾藤"}, {"ti", "提体题替"}, {"tian", "天田甜填"}, {"tiao", "条跳挑调"},
+        {"tie", "铁贴帖"}, {"ting", "听停亭挺"}, {"tong", "同通痛童"}, {"tou", "头投透偷"},
+        {"tu", "土图途吐"}, {"tuan", "团湍"}, {"tui", "推退腿颓"}, {"tun", "吞屯臀"},
+        {"tuo", "脱拖托妥"}, {"wa", "挖哇娃瓦"}, {"wai", "外歪"}, {"wan", "完晚万玩"},
+        {"wang", "王网往望"}, {"wei", "为位未围"}, {"wen", "问文温闻"}, {"weng", "翁嗡"},
+        {"wo", "我握卧窝"}, {"wu", "五无物武"}, {"xi", "西习喜洗"}, {"xia", "下夏吓虾"},
+        {"xian", "先现线县"}, {"xiang", "想向像香"}, {"xiao", "小笑学校"}, {"xie", "写些谢斜"},
+        {"xin", "新心信欣"}, {"xing", "行 Xing 型"}, {"xiong", "雄熊凶胸"}, {"xiu", "修休秀绣"},
+        {"xu", "需许续虚"}, {"xuan", "选宣悬旋"}, {"xue", "学雪血穴"}, {"xun", "寻训讯迅"},
+        {"ya", "呀压牙鸦"}, {"yan", "眼言严演"}, {"yang", "样阳养羊"}, {"yao", "要药摇咬"},
+        {"ye", "也业叶夜"}, {"yi", "一以意已"}, {"yin", "因音引银"}, {"ying", "应英影营"},
+        {"yo", "哟唷"}, {"yong", "用永勇拥"}, {"you", "有又右友"}, {"yu", "与于鱼雨"},
+        {"yuan", "元原远园"}, {"yue", "月越约乐"}, {"yun", "云运允韵"}, {"za", "杂砸咋"},
+        {"zai", "在再载灾"}, {"zan", "咱暂赞"}, {"zang", "脏葬藏"}, {"zao", "早造枣澡"},
+        {"ze", "则责泽择"}, {"zei", "贼"}, {"zen", "怎"}, {"zeng", "增曾赠"},
+        {"zha", "扎炸渣眨"}, {"zhai", "宅摘窄债"}, {"zhan", "站战占展"}, {"zhang", "张长掌丈"},
+        {"zhao", "找照招赵"}, {"zhe", "这着者折"}, {"zhei", "这"}, {"zhen", "真镇针震"},
+        {"zheng", "正整争证"}, {"zhi", "只之知直"}, {"zhong", "中重众钟"}, {"zhou", "周州洲粥"},
+        {"zhu", "主住注猪"}, {"zhua", "抓爪"}, {"zhuai", "拽"}, {"zhuan", "转专赚砖"},
+        {"zhuang", "装状庄撞"}, {"zhui", "追坠锥"}, {"zhun", "准谆"}, {"zhuo", "着桌捉浊"},
+        {"zi", "子自字紫"}, {"zong", "总宗综踪"}, {"zou", "走奏揍"}, {"zu", "足组族阻"},
+        {"zuan", "钻纂"}, {"zui", "最嘴醉"}, {"zun", "尊遵"}, {"zuo", "做左坐作"}
+    };
 
     @Override
     public View onCreateInputView() {
-        keyboardContainer = new LinearLayout(this);
-        keyboardContainer.setOrientation(LinearLayout.VERTICAL);
-        keyboardContainer.setBackgroundColor(Color.parseColor("#F5F5FA"));
-        keyboardContainer.setPadding(8, 8, 8, 8);
+        LinearLayout rootLayout = new LinearLayout(this);
+        rootLayout.setOrientation(LinearLayout.VERTICAL);
+        rootLayout.setBackgroundColor(Color.parseColor("#F2F2F7"));
 
         // 候选词栏
-        candidateScroll = new HorizontalScrollView(this);
         candidateBar = new LinearLayout(this);
         candidateBar.setOrientation(LinearLayout.HORIZONTAL);
-        candidateScroll.addView(candidateBar);
-        candidateScroll.setBackgroundColor(Color.parseColor("#FFFFFF"));
-        candidateScroll.setPadding(4, 8, 4, 8);
-        keyboardContainer.addView(candidateScroll);
+        candidateBar.setBackgroundColor(Color.WHITE);
+        candidateBar.setPadding(8, 4, 8, 4);
+        candidateBar.setVisibility(View.GONE);
+        rootLayout.addView(candidateBar, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        // 键盘区域
+        // 键盘视图
         keyboardView = new KeyboardView(this, null);
         keyboardView.setOnKeyboardActionListener(this);
-        keyboardView.setPreviewEnabled(true);
-        keyboardView.setBackgroundColor(Color.parseColor("#E8E8F0"));
-        LinearLayout.LayoutParams kvParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-        keyboardContainer.addView(keyboardView, kvParams);
+        keyboardView.setBackgroundColor(Color.parseColor("#D1D1D6"));
+        keyboardView.setKeyBackground(getDrawable(android.R.drawable.btn_default));
+        rootLayout.addView(keyboardView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        // 手写视图
-        handwritingView = createHandwritingView();
-        handwritingView.setVisibility(View.GONE);
-        keyboardContainer.addView(handwritingView);
+        // 加载键盘
+        qwertyKeyboard = new Keyboard(this, R.xml.keyboard_qwerty);
+        symbolsKeyboard = createSymbolsKeyboard();
+        numbersKeyboard = createNumbersKeyboard();
 
-        switchKeyboard(0);
-        return keyboardContainer;
+        currentMode = MODE_QWERTY;
+        keyboardView.setKeyboard(qwertyKeyboard);
+
+        return rootLayout;
     }
 
-    private View createHandwritingView() {
-        LinearLayout layout = new LinearLayout(this);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setBackgroundColor(Color.parseColor("#FFFFFF"));
-        layout.setPadding(16, 16, 16, 16);
-
-        TextView title = new TextView(this);
-        title.setText("手写输入 - 点击常用字");
-        title.setTextSize(14);
-        title.setTextColor(Color.parseColor("#666666"));
-        title.setGravity(Gravity.CENTER);
-        layout.addView(title);
-
-        // 常用字
-        HorizontalScrollView commonScroll = new HorizontalScrollView(this);
-        LinearLayout commonLayout = new LinearLayout(this);
-        commonLayout.setOrientation(LinearLayout.HORIZONTAL);
-        String[] commonChars = {"的","一","是","在","不","了","有","和","人","这","中","大","为","上","个","我","以","要","他","时","来","用","们","生","到","作","地","于","出","就","分","对","成","会","可","你","能","而","子","那","得","着","下","自","之","年","过","发","后","里","道","行","所","然","家","种","事","方","多","经","么","去","法","学","如","都","同","现","当","没","动","面","起","看","定","天","还","进","好","小","部","其","些","主","样","理","心","她","本","前","开","但","因","只","从","想","实"};
-        for (String c : commonChars) {
-            Button btn = new Button(this);
-            btn.setText(c);
-            btn.setTextSize(18);
-            btn.setBackgroundColor(Color.parseColor("#F3E5F5"));
-            btn.setTextColor(Color.parseColor("#6A1B9A"));
-            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            bp.setMargins(2, 4, 2, 4);
-            btn.setLayoutParams(bp);
-            btn.setOnClickListener(v -> commitText(c));
-            commonLayout.addView(btn);
-        }
-        commonScroll.addView(commonLayout);
-        layout.addView(commonScroll);
-
-        return layout;
+    private Keyboard createSymbolsKeyboard() {
+        return new Keyboard(this, R.xml.keyboard_symbols);
     }
 
-    private void switchKeyboard(int mode) {
-        currentMode = mode;
-        if (handwritingView != null) handwritingView.setVisibility(View.GONE);
-        if (keyboardView != null) keyboardView.setVisibility(View.VISIBLE);
-        morseBuilder.setLength(0);
+    private Keyboard createNumbersKeyboard() {
+        return new Keyboard(this, R.xml.keyboard_numbers);
+    }
 
-        if (mode == 2) {
-            if (handwritingView != null) handwritingView.setVisibility(View.VISIBLE);
-            if (keyboardView != null) keyboardView.setVisibility(View.GONE);
-            return;
-        }
-
-        // 使用自定义键盘XML
-        currentKeyboard = new Keyboard(this, R.xml.keyboard_qwerty);
-        if (keyboardView != null && currentKeyboard != null) {
-            keyboardView.setKeyboard(currentKeyboard);
-        }
+    @Override
+    public void onStartInputView(EditorInfo info, boolean restarting) {
+        super.onStartInputView(info, restarting);
+        currentMode = MODE_QWERTY;
+        isUpperCase = false;
+        composingText = "";
+        updateCandidates();
+        keyboardView.setKeyboard(qwertyKeyboard);
     }
 
     @Override
     public void onKey(int primaryCode, int[] keyCodes) {
-        if (primaryCode == Keyboard.KEYCODE_DELETE) {
-            getCurrentInputConnection().deleteSurroundingText(1, 0);
-            return;
-        }
-        if (primaryCode == Keyboard.KEYCODE_SHIFT) {
-            isShift = !isShift;
-            if (currentKeyboard != null) currentKeyboard.setShifted(isShift);
-            if (keyboardView != null) keyboardView.invalidateAllKeys();
-            return;
-        }
-        if (primaryCode == Keyboard.KEYCODE_DONE || primaryCode == KeyEvent.KEYCODE_ENTER) {
-            getCurrentInputConnection().performEditorAction(EditorInfo.IME_ACTION_DONE);
-            return;
-        }
-        if (primaryCode == Keyboard.KEYCODE_MODE_CHANGE) {
-            // 切换键盘模式
-            currentMode = (currentMode + 1) % 8;
-            switchKeyboard(currentMode);
-            return;
-        }
-        if (primaryCode == ' ') {
-            commitText(" ");
-            pinyinBuilder.setLength(0);
-            updateCandidates();
-            return;
-        }
+        InputConnection ic = getCurrentInputConnection();
+        if (ic == null) return;
 
-        // 普通字符
-        char code = (char) primaryCode;
-        if (Character.isLetter(code)) {
-            if (isShift) code = Character.toUpperCase(code);
-            if (currentMode == 0) {
-                pinyinBuilder.append(Character.toLowerCase(code));
+        switch (primaryCode) {
+            case Keyboard.KEYCODE_DELETE:
+                if (composingText.length() > 0) {
+                    composingText = composingText.substring(0, composingText.length() - 1);
+                    updateCandidates();
+                } else {
+                    ic.deleteSurroundingText(1, 0);
+                }
+                break;
+            case Keyboard.KEYCODE_SHIFT:
+                isUpperCase = !isUpperCase;
+                qwertyKeyboard.setShifted(isUpperCase);
+                keyboardView.invalidateAllKeys();
+                break;
+            case Keyboard.KEYCODE_MODE_CHANGE:
+                if (currentMode == MODE_QWERTY) {
+                    currentMode = MODE_SYMBOLS;
+                    keyboardView.setKeyboard(symbolsKeyboard);
+                } else {
+                    currentMode = MODE_QWERTY;
+                    keyboardView.setKeyboard(qwertyKeyboard);
+                }
+                composingText = "";
                 updateCandidates();
-            } else {
-                commitText(String.valueOf(code));
-            }
-        } else {
-            commitText(String.valueOf(code));
+                break;
+            case Keyboard.KEYCODE_DONE:
+                ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
+                break;
+            case 10001: // 123按钮 - 切换到数字
+                currentMode = MODE_NUMBERS;
+                keyboardView.setKeyboard(numbersKeyboard);
+                composingText = "";
+                updateCandidates();
+                break;
+            case 10002: // ABC按钮 - 回到英文
+                currentMode = MODE_QWERTY;
+                keyboardView.setKeyboard(qwertyKeyboard);
+                composingText = "";
+                updateCandidates();
+                break;
+            case 10003: // 手写按钮
+                switchToHandwriting();
+                break;
+            case 10004: // 表情按钮
+                switchToEmoji();
+                break;
+            case 32: // 空格
+                if (composingText.length() > 0 && candidates.size() > 0) {
+                    ic.commitText(candidates.get(0), 1);
+                    composingText = "";
+                    updateCandidates();
+                } else {
+                    ic.commitText(" ", 1);
+                }
+                break;
+            default:
+                char code = (char) primaryCode;
+                if (Character.isLetter(code)) {
+                    if (isUpperCase) {
+                        code = Character.toUpperCase(code);
+                        isUpperCase = false;
+                        qwertyKeyboard.setShifted(false);
+                        keyboardView.invalidateAllKeys();
+                    }
+                    if (currentMode == MODE_QWERTY && !isUpperCase && Character.isLowerCase(code)) {
+                        composingText += code;
+                        updateCandidates();
+                    } else {
+                        ic.commitText(String.valueOf(code), 1);
+                    }
+                } else {
+                    ic.commitText(String.valueOf(code), 1);
+                }
         }
     }
 
     private void updateCandidates() {
         candidateBar.removeAllViews();
-        String pinyin = pinyinBuilder.toString();
-        if (pinyin.isEmpty()) return;
+        candidates.clear();
 
-        // 显示拼音
-        Button pinyinBtn = new Button(this);
-        pinyinBtn.setText(pinyin);
-        pinyinBtn.setTextSize(14);
-        pinyinBtn.setBackgroundColor(Color.parseColor("#E3F2FD"));
-        pinyinBtn.setTextColor(Color.parseColor("#1565C0"));
-        pinyinBtn.setOnClickListener(v -> {
-            commitText(pinyin);
-            pinyinBuilder.setLength(0);
-            updateCandidates();
-        });
-        candidateBar.addView(pinyinBtn);
+        if (composingText.length() == 0) {
+            candidateBar.setVisibility(View.GONE);
+            return;
+        }
 
-        // 简单候选字
-        String[] candidates = getSimpleCandidates(pinyin);
-        for (String c : candidates) {
+        // 查找拼音匹配
+        for (String[] entry : PINYIN_MAP) {
+            if (entry[0].startsWith(composingText.toLowerCase())) {
+                for (int i = 0; i < Math.min(5, entry[1].length()); i++) {
+                    candidates.add(String.valueOf(entry[1].charAt(i)));
+                }
+                break;
+            }
+        }
+
+        if (candidates.isEmpty()) {
+            candidateBar.setVisibility(View.GONE);
+            return;
+        }
+
+        candidateBar.setVisibility(View.VISIBLE);
+        for (int i = 0; i < candidates.size(); i++) {
+            final String word = candidates.get(i);
             Button btn = new Button(this);
-            btn.setText(c);
+            btn.setText(word);
             btn.setTextSize(16);
-            btn.setBackgroundColor(Color.parseColor("#FFFFFF"));
-            btn.setTextColor(Color.parseColor("#333333"));
-            LinearLayout.LayoutParams bp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            bp.setMargins(4, 0, 4, 0);
-            btn.setLayoutParams(bp);
+            btn.setBackgroundColor(Color.TRANSPARENT);
+            btn.setPadding(16, 8, 16, 8);
             btn.setOnClickListener(v -> {
-                commitText(c);
-                pinyinBuilder.setLength(0);
-                updateCandidates();
+                InputConnection ic = getCurrentInputConnection();
+                if (ic != null) {
+                    ic.commitText(word, 1);
+                    composingText = "";
+                    updateCandidates();
+                }
             });
             candidateBar.addView(btn);
         }
     }
 
-    private String[] getSimpleCandidates(String pinyin) {
-        Map<String, String[]> map = new HashMap<>();
-        map.put("a", new String[]{"啊","阿","呵"});
-        map.put("ai", new String[]{"爱","哎","唉","矮","碍"});
-        map.put("an", new String[]{"安","按","暗","岸","案"});
-        map.put("ang", new String[]{"昂","盎"});
-        map.put("ao", new String[]{"奥","熬","傲","凹","澳"});
-        map.put("ba", new String[]{"吧","把","八","爸","巴"});
-        map.put("bai", new String[]{"白","百","拜","败","摆"});
-        map.put("ban", new String[]{"班","半","办","版","般"});
-        map.put("bang", new String[]{"帮","棒","榜","绑","磅"});
-        map.put("bao", new String[]{"包","报","保","宝","抱"});
-        map.put("bei", new String[]{"北","被","背","杯","悲"});
-        map.put("ben", new String[]{"本","笨","奔"});
-        map.put("beng", new String[]{"蹦","崩","绷"});
-        map.put("bi", new String[]{"比","必","笔","币","毕"});
-        map.put("bian", new String[]{"变","边","便","遍","编"});
-        map.put("biao", new String[]{"表","标","彪","膘"});
-        map.put("bie", new String[]{"别","憋","瘪"});
-        map.put("bin", new String[]{"宾","滨","彬","斌"});
-        map.put("bing", new String[]{"并","病","冰","兵","饼"});
-        map.put("bo", new String[]{"波","博","播","驳","泊"});
-        map.put("bu", new String[]{"不","部","步","布","补"});
-        map.put("ca", new String[]{"擦","嚓"});
-        map.put("cai", new String[]{"才","菜","财","猜","材"});
-        map.put("can", new String[]{"参","餐","残","惨","蚕"});
-        map.put("cang", new String[]{"藏","仓","苍","舱"});
-        map.put("cao", new String[]{"草","操","曹","槽"});
-        map.put("ce", new String[]{"测","侧","册","策"});
-        map.put("ceng", new String[]{"层","曾","蹭"});
-        map.put("cha", new String[]{"查","茶","差","插","察"});
-        map.put("chai", new String[]{"拆","柴","差"});
-        map.put("chan", new String[]{"产","缠","馋","掺","蝉"});
-        map.put("chang", new String[]{"长","常","场","唱","厂"});
-        map.put("chao", new String[]{"超","朝","潮","炒","吵"});
-        map.put("che", new String[]{"车","扯","彻","撤"});
-        map.put("chen", new String[]{"陈","沉","晨","称","趁"});
-        map.put("cheng", new String[]{"成","城","程","称","诚"});
-        map.put("chi", new String[]{"吃","持","尺","迟","池"});
-        map.put("chong", new String[]{"冲","虫","充","重","崇"});
-        map.put("chou", new String[]{"抽","丑","臭","仇","愁"});
-        map.put("chu", new String[]{"出","处","初","除","楚"});
-        map.put("chuan", new String[]{"穿","川","传","船","串"});
-        map.put("chuang", new String[]{"窗","床","创","闯"});
-        map.put("chui", new String[]{"吹","垂","锤","炊"});
-        map.put("chun", new String[]{"春","纯","唇","蠢"});
-        map.put("chuo", new String[]{"戳","绰","辍"});
-        map.put("ci", new String[]{"此","次","词","刺","磁"});
-        map.put("cong", new String[]{"从","聪","葱","丛"});
-        map.put("cou", new String[]{"凑","辏"});
-        map.put("cu", new String[]{"粗","促","醋","簇"});
-        map.put("cuan", new String[]{"窜","篡","蹿"});
-        map.put("cui", new String[]{"催","脆","翠","崔","摧"});
-        map.put("cun", new String[]{"村","存","寸"});
-        map.put("cuo", new String[]{"错","措","挫","撮","搓"});
-        map.put("da", new String[]{"大","打","达","答","搭"});
-        map.put("dai", new String[]{"带","代","待","袋","戴"});
-        map.put("dan", new String[]{"但","单","蛋","担","淡"});
-        map.put("dang", new String[]{"当","党","挡","档","荡"});
-        map.put("dao", new String[]{"到","道","刀","倒","导"});
-        map.put("de", new String[]{"的","得","德","地"});
-        map.put("deng", new String[]{"等","灯","登","邓"});
-        map.put("di", new String[]{"的","地","低","底","敌"});
-        map.put("dian", new String[]{"点","电","店","典","颠"});
-        map.put("diao", new String[]{"掉","调","吊","钓","叼"});
-        map.put("die", new String[]{"跌","爹","碟","蝶","叠"});
-        map.put("ding", new String[]{"定","顶","丁","订","钉"});
-        map.put("diu", new String[]{"丢"});
-        map.put("dong", new String[]{"东","动","懂","冬","洞"});
-        map.put("dou", new String[]{"都","斗","豆","抖","陡"});
-        map.put("du", new String[]{"度","读","毒","独","堵"});
-        map.put("duan", new String[]{"段","短","断","端","锻"});
-        map.put("dui", new String[]{"对","队","堆","兑"});
-        map.put("dun", new String[]{"顿","吨","蹲","盾","敦"});
-        map.put("duo", new String[]{"多","朵","躲","夺","堕"});
-        map.put("e", new String[]{"饿","恶","额","俄","鹅"});
-        map.put("en", new String[]{"恩","嗯"});
-        map.put("er", new String[]{"二","而","儿","尔","耳"});
-        map.put("fa", new String[]{"发","法","罚","伐","乏"});
-        map.put("fan", new String[]{"反","饭","犯","烦","翻"});
-        map.put("fang", new String[]{"方","放","房","防","访"});
-        map.put("fei", new String[]{"非","飞","费","肥","废"});
-        map.put("fen", new String[]{"分","份","芬","纷","坟"});
-        map.put("feng", new String[]{"风","封","丰","疯","峰"});
-        map.put("fo", new String[]{"佛"});
-        map.put("fou", new String[]{"否"});
-        map.put("fu", new String[]{"父","服","福","府","副"});
-        map.put("ga", new String[]{"嘎","噶"});
-        map.put("gai", new String[]{"该","改","盖","概","钙"});
-        map.put("gan", new String[]{"干","敢","感","赶","甘"});
-        map.put("gang", new String[]{"刚","钢","港","岗","纲"});
-        map.put("gao", new String[]{"高","搞","告","稿","糕"});
-        map.put("ge", new String[]{"个","歌","各","哥","格"});
-        map.put("gei", new String[]{"给"});
-        map.put("gen", new String[]{"跟","根","亘"});
-        map.put("geng", new String[]{"更","耕","庚","羹"});
-        map.put("gong", new String[]{"工","公","共","功","供"});
-        map.put("gou", new String[]{"够","狗","沟","购","构"});
-        map.put("gu", new String[]{"古","故","顾","骨","谷"});
-        map.put("gua", new String[]{"挂","瓜","刮","寡"});
-        map.put("guai", new String[]{"怪","乖","拐"});
-        map.put("guan", new String[]{"关","管","观","官","馆"});
-        map.put("guang", new String[]{"光","广","逛"});
-        map.put("gui", new String[]{"归","贵","鬼","规","柜"});
-        map.put("gun", new String[]{"滚","棍","辊"});
-        map.put("guo", new String[]{"国","过","果","锅","裹"});
-        map.put("ha", new String[]{"哈","蛤"});
-        map.put("hai", new String[]{"还","海","害","孩","嗨"});
-        map.put("han", new String[]{"含","汉","寒","喊","汗"});
-        map.put("hang", new String[]{"行","航","杭","巷"});
-        map.put("hao", new String[]{"好","号","浩","耗","豪"});
-        map.put("he", new String[]{"和","河","他","喝","合"});
-        map.put("hei", new String[]{"黑","嘿"});
-        map.put("hen", new String[]{"很","恨","狠","痕"});
-        map.put("heng", new String[]{"横","恒","衡","亨"});
-        map.put("hong", new String[]{"红","洪","宏","轰","虹"});
-        map.put("hou", new String[]{"后","厚","候","侯","猴"});
-        map.put("hu", new String[]{"和","户","湖","胡","虎"});
-        map.put("hua", new String[]{"话","花","华","画","化"});
-        map.put("huai", new String[]{"坏","怀","淮","槐"});
-        map.put("huan", new String[]{"还","换","欢","环","缓"});
-        map.put("huang", new String[]{"黄","皇","荒","慌","晃"});
-        map.put("hui", new String[]{"会","回","灰","辉","毁"});
-        map.put("hun", new String[]{"婚","混","昏","魂","浑"});
-        map.put("huo", new String[]{"或","活","火","货","获"});
-        map.put("ji", new String[]{"几","机","集","记","己"});
-        map.put("jia", new String[]{"家","加","假","价","架"});
-        map.put("jian", new String[]{"见","间","建","件","简"});
-        map.put("jiang", new String[]{"将","讲","江","降","姜"});
-        map.put("jiao", new String[]{"叫","教","交","脚","角"});
-        map.put("jie", new String[]{"结","接","节","街","解"});
-        map.put("jin", new String[]{"进","今","金","近","尽"});
-        map.put("jing", new String[]{"经","京","精","静","境"});
-        map.put("jiu", new String[]{"就","九","久","酒","旧"});
-        map.put("ju", new String[]{"句","举","局","具","剧"});
-        map.put("juan", new String[]{"卷","娟","倦","眷"});
-        map.put("jue", new String[]{"觉","决","绝","角","掘"});
-        map.put("jun", new String[]{"军","均","君","俊","菌"});
-        map.put("ka", new String[]{"卡","咖","喀"});
-        map.put("kai", new String[]{"开","凯","慨","楷"});
-        map.put("kan", new String[]{"看","砍","刊","勘","堪"});
-        map.put("kang", new String[]{"抗","扛","康","糠","炕"});
-        map.put("kao", new String[]{"考","靠","烤","拷"});
-        map.put("ke", new String[]{"可","课","克","客","刻"});
-        map.put("ken", new String[]{"肯","啃","垦","恳"});
-        map.put("keng", new String[]{"坑","铿"});
-        map.put("kong", new String[]{"空","孔","控","恐"});
-        map.put("kou", new String[]{"口","扣","寇","叩"});
-        map.put("ku", new String[]{"苦","哭","库","酷","裤"});
-        map.put("kua", new String[]{"夸","跨","垮","挎"});
-        map.put("kuai", new String[]{"快","块","筷","会"});
-        map.put("kuan", new String[]{"宽","款"});
-        map.put("kuang", new String[]{"况","矿","狂","框","筐"});
-        map.put("kui", new String[]{"亏","愧","溃","葵","魁"});
-        map.put("kun", new String[]{"困","昆","捆","坤"});
-        map.put("kuo", new String[]{"扩","阔","括","廓"});
-        map.put("la", new String[]{"拉","啦","辣","腊","蜡"});
-        map.put("lai", new String[]{"来","赖","莱","睐"});
-        map.put("lan", new String[]{"兰","蓝","烂","懒","栏"});
-        map.put("lang", new String[]{"浪","狼","郎","朗","廊"});
-        map.put("lao", new String[]{"老","劳","牢","捞","姥"});
-        map.put("le", new String[]{"了","乐","勒","雷"});
-        map.put("lei", new String[]{"类","累","雷","泪","垒"});
-        map.put("leng", new String[]{"冷","愣","棱"});
-        map.put("li", new String[]{"里","力","立","理","李"});
-        map.put("lia", new String[]{"俩"});
-        map.put("lian", new String[]{"连","脸","练","联","恋"});
-        map.put("liang", new String[]{"两","亮","量","良","凉"});
-        map.put("liao", new String[]{"了","料","聊","辽","疗"});
-        map.put("lie", new String[]{"列","烈","猎","裂","劣"});
-        map.put("lin", new String[]{"林","临","邻","淋","琳"});
-        map.put("ling", new String[]{"领","零","灵","令","另"});
-        map.put("liu", new String[]{"流","留","六","刘","柳"});
-        map.put("long", new String[]{"龙","隆","笼","聋","拢"});
-        map.put("lou", new String[]{"楼","漏","陋","搂"});
-        map.put("lu", new String[]{"路","录","陆","炉","鲁"});
-        map.put("lv", new String[]{"绿","律","旅","虑","率"});
-        map.put("luan", new String[]{"乱","卵","滦","峦"});
-        map.put("lun", new String[]{"论","轮","伦","沦"});
-        map.put("luo", new String[]{"落","罗","洛","络","骆"});
-        map.put("ma", new String[]{"吗","妈","马","麻","骂"});
-        map.put("mai", new String[]{"买","卖","麦","埋","迈"});
-        map.put("man", new String[]{"满","慢","漫","蛮","瞒"});
-        map.put("mang", new String[]{"忙","芒","盲","茫","莽"});
-        map.put("mao", new String[]{"毛","猫","冒","帽","茂"});
-        map.put("me", new String[]{"么","嘛"});
-        map.put("mei", new String[]{"没","美","每","妹","眉"});
-        map.put("men", new String[]{"们","门","闷","扪"});
-        map.put("meng", new String[]{"梦","猛","蒙","盟","孟"});
-        map.put("mi", new String[]{"米","密","迷","蜜","眯"});
-        map.put("mian", new String[]{"面","免","绵","棉","眠"});
-        map.put("miao", new String[]{"秒","苗","庙","妙","描"});
-        map.put("mie", new String[]{"灭","蔑","咩"});
-        map.put("min", new String[]{"民","敏","闽","悯","皿"});
-        map.put("ming", new String[]{"明","名","命","鸣","冥"});
-        map.put("miu", new String[]{"谬","缪"});
-        map.put("mo", new String[]{"摸","末","墨","默","莫"});
-        map.put("mou", new String[]{"某","谋","牟"});
-        map.put("mu", new String[]{"母","木","目","牧","幕"});
-        map.put("na", new String[]{"那","拿","哪","呐","纳"});
-        map.put("nai", new String[]{"奶","耐","乃","奈"});
-        map.put("nan", new String[]{"南","男","难","楠","喃"});
-        map.put("nang", new String[]{"囊","馕"});
-        map.put("nao", new String[]{"脑","闹","恼","挠"});
-        map.put("ne", new String[]{"呢","讷"});
-        map.put("nei", new String[]{"内","馁"});
-        map.put("nen", new String[]{"嫩","恁"});
-        map.put("neng", new String[]{"能"});
-        map.put("ni", new String[]{"你","呢","泥","逆","尼"});
-        map.put("nian", new String[]{"年","念","粘","撵","捻"});
-        map.put("niang", new String[]{"娘","酿"});
-        map.put("niao", new String[]{"鸟","尿"});
-        map.put("nie", new String[]{"捏","涅","聂","孽","镍"});
-        map.put("nin", new String[]{"您"});
-        map.put("ning", new String[]{"宁","凝","拧","柠","咛"});
-        map.put("niu", new String[]{"牛","扭","钮","纽"});
-        map.put("nong", new String[]{"农","浓","弄","脓"});
-        map.put("nu", new String[]{"女","努","怒","奴","弩"});
-        map.put("nuan", new String[]{"暖"});
-        map.put("nuo", new String[]{"诺","挪","懦","糯"});
-        map.put("o", new String[]{"哦","噢","喔"});
-        map.put("ou", new String[]{"欧","偶","呕","藕","殴"});
-        map.put("pa", new String[]{"怕","爬","帕","趴","啪"});
-        map.put("pai", new String[]{"排","派","拍","牌","徘"});
-        map.put("pan", new String[]{"盘","判","盼","攀","潘"});
-        map.put("pang", new String[]{"旁","胖","庞","彷","磅"});
-        map.put("pao", new String[]{"跑","炮","泡","抛","袍"});
-        map.put("pei", new String[]{"配","陪","培","赔","佩"});
-        map.put("pen", new String[]{"盆","喷"});
-        map.put("peng", new String[]{"朋","碰","彭","捧","蓬"});
-        map.put("pi", new String[]{"皮","批","屁","脾","疲"});
-        map.put("pian", new String[]{"片","篇","偏","骗","便"});
-        map.put("piao", new String[]{"票","飘","漂","瓢","嫖"});
-        map.put("pie", new String[]{"撇","瞥"});
-        map.put("pin", new String[]{"品","拼","贫","频","聘"});
-        map.put("ping", new String[]{"平","评","瓶","苹","凭"});
-        map.put("po", new String[]{"破","坡","泼","婆","迫"});
-        map.put("pou", new String[]{"剖","掊"});
-        map.put("pu", new String[]{"普","仆","扑","铺","朴"});
-        map.put("qi", new String[]{"其","起","期","七","气"});
-        map.put("qia", new String[]{"恰","洽","掐","卡"});
-        map.put("qian", new String[]{"前","钱","千","浅","签"});
-        map.put("qiang", new String[]{"强","墙","抢","枪","腔"});
-        map.put("qiao", new String[]{"桥","巧","敲","瞧","翘"});
-        map.put("qie", new String[]{"切","且","窃","茄","怯"});
-        map.put("qin", new String[]{"亲","琴","勤","侵","秦"});
-        map.put("qing", new String[]{"请","清","青","轻","情"});
-        map.put("qiong", new String[]{"穷","琼","穹"});
-        map.put("qiu", new String[]{"球","求","秋","丘","囚"});
-        map.put("qu", new String[]{"去","取","区","曲","趣"});
-        map.put("quan", new String[]{"全","权","圈","泉","拳"});
-        map.put("que", new String[]{"却","确","缺","雀","鹊"});
-        map.put("qun", new String[]{"群","裙"});
-        map.put("ran", new String[]{"然","燃","染","冉"});
-        map.put("rang", new String[]{"让","嚷","壤","攘"});
-        map.put("rao", new String[]{"绕","扰","饶","娆"});
-        map.put("re", new String[]{"热","惹"});
-        map.put("ren", new String[]{"人","认","任","忍","仁"});
-        map.put("reng", new String[]{"仍","扔"});
-        map.put("ri", new String[]{"日"});
-        map.put("rong", new String[]{"容","荣","融","熔","溶"});
-        map.put("rou", new String[]{"肉","柔","揉","蹂"});
-        map.put("ru", new String[]{"如","入","乳","儒","茹"});
-        map.put("ruan", new String[]{"软","阮"});
-        map.put("rui", new String[]{"瑞","锐","蕊","睿"});
-        map.put("run", new String[]{"润","闰"});
-        map.put("ruo", new String[]{"若","弱","偌"});
-        map.put("sa", new String[]{"撒","洒","萨","卅"});
-        map.put("sai", new String[]{"赛","塞","腮","鳃"});
-        map.put("san", new String[]{"三","散","伞","叁"});
-        map.put("sang", new String[]{"桑","嗓","丧","搡"});
-        map.put("sao", new String[]{"扫","骚","嫂","臊"});
-        map.put("se", new String[]{"色","涩","瑟","塞","啬"});
-        map.put("sen", new String[]{"森"});
-        map.put("seng", new String[]{"僧"});
-        map.put("sha", new String[]{"杀","沙","傻","啥","纱"});
-        map.put("shai", new String[]{"晒","筛"});
-        map.put("shan", new String[]{"山","善","闪","衫","扇"});
-        map.put("shang", new String[]{"上","商","伤","尚","赏"});
-        map.put("shao", new String[]{"少","烧","稍","勺","哨"});
-        map.put("she", new String[]{"社","设","射","蛇","舌"});
-        map.put("shei", new String[]{"谁"});
-        map.put("shen", new String[]{"什","深","身","神","甚"});
-        map.put("sheng", new String[]{"生","声","省","圣","胜"});
-        map.put("shi", new String[]{"是","时","事","市","十"});
-        map.put("shou", new String[]{"手","收","首","受","瘦"});
-        map.put("shu", new String[]{"书","数","树","熟","输"});
-        map.put("shua", new String[]{"刷","耍"});
-        map.put("shuai", new String[]{"帅","摔","衰","甩"});
-        map.put("shuan", new String[]{"栓","拴","闩","涮"});
-        map.put("shuang", new String[]{"双","爽","霜"});
-        map.put("shui", new String[]{"水","谁","睡","税","说"});
-        map.put("shun", new String[]{"顺","瞬","舜"});
-        map.put("shuo", new String[]{"说","硕","朔","烁"});
-        map.put("si", new String[]{"四","死","思","私","司"});
-        map.put("song", new String[]{"送","松","宋","颂","诵"});
-        map.put("sou", new String[]{"搜","艘","嗖","叟"});
-        map.put("su", new String[]{"苏","速","素","诉","俗"});
-        map.put("suan", new String[]{"算","酸","蒜"});
-        map.put("sui", new String[]{"虽","随","岁","碎","隋"});
-        map.put("sun", new String[]{"孙","损","笋"});
-        map.put("suo", new String[]{"所","锁","索","缩","梭"});
-        map.put("ta", new String[]{"他","她","它","塔","踏"});
-        map.put("tai", new String[]{"太","台","态","泰","抬"});
-        map.put("tan", new String[]{"谈","弹","探","叹","碳"});
-        map.put("tang", new String[]{"堂","糖","唐","汤","躺"});
-        map.put("tao", new String[]{"套","逃","桃","淘","涛"});
-        map.put("te", new String[]{"特"});
-        map.put("teng", new String[]{"疼","腾","藤"});
-        map.put("ti", new String[]{"提","体","题","替","踢"});
-        map.put("tian", new String[]{"天","田","甜","填","添"});
-        map.put("tiao", new String[]{"条","跳","调","挑","眺"});
-        map.put("tie", new String[]{"铁","贴","帖"});
-        map.put("ting", new String[]{"听","停","亭","廷","挺"});
-        map.put("tong", new String[]{"同","通","痛","统","童"});
-        map.put("tou", new String[]{"头","投","透","偷"});
-        map.put("tu", new String[]{"图","土","涂","途","兔"});
-        map.put("tuan", new String[]{"团","湍"});
-        map.put("tui", new String[]{"推","退","腿","颓"});
-        map.put("tun", new String[]{"吞","屯","臀","囤"});
-        map.put("tuo", new String[]{"脱","拖","托","驮","妥"});
-        map.put("wa", new String[]{"挖","哇","蛙","瓦","袜"});
-        map.put("wai", new String[]{"外","歪","崴"});
-        map.put("wan", new String[]{"完","万","晚","玩","碗"});
-        map.put("wang", new String[]{"王","往","网","望","忘"});
-        map.put("wei", new String[]{"为","位","围","微","味"});
-        map.put("wen", new String[]{"文","问","闻","温","稳"});
-        map.put("weng", new String[]{"翁","嗡","瓮"});
-        map.put("wo", new String[]{"我","握","窝","卧","沃"});
-        map.put("wu", new String[]{"五","无","物","武","务"});
-        map.put("xi", new String[]{"西","习","喜","洗","系"});
-        map.put("xia", new String[]{"下","夏","吓","虾","瞎"});
-        map.put("xian", new String[]{"先","现","线","县","鲜"});
-        map.put("xiang", new String[]{"想","向","像","香","响"});
-        map.put("xiao", new String[]{"小","笑","校","效","萧"});
-        map.put("xie", new String[]{"些","写","谢","鞋","斜"});
-        map.put("xin", new String[]{"新","心","信","欣","辛"});
-        map.put("xing", new String[]{"行","星","兴","型","姓"});
-        map.put("xiong", new String[]{"雄","熊","凶","兄","胸"});
-        map.put("xiu", new String[]{"修","休","秀","袖","绣"});
-        map.put("xu", new String[]{"需","许","续","须","虚"});
-        map.put("xuan", new String[]{"选","宣","悬","旋","玄"});
-        map.put("xue", new String[]{"学","雪","血","穴","靴"});
-        map.put("xun", new String[]{"寻","训","讯","勋","循"});
-        map.put("ya", new String[]{"呀","压","牙","鸦","雅"});
-        map.put("yan", new String[]{"眼","言","严","烟","沿"});
-        map.put("yang", new String[]{"样","阳","养","央","羊"});
-        map.put("yao", new String[]{"要","药","摇","咬","腰"});
-        map.put("ye", new String[]{"也","夜","叶","业","野"});
-        map.put("yi", new String[]{"一","以","已","意","义"});
-        map.put("yin", new String[]{"因","音","银","引","印"});
-        map.put("ying", new String[]{"应","英","影","营","迎"});
-        map.put("yo", new String[]{"哟","唷"});
-        map.put("yong", new String[]{"用","永","勇","拥","涌"});
-        map.put("you", new String[]{"有","又","右","友","优"});
-        map.put("yu", new String[]{"与","于","语","雨","鱼"});
-        map.put("yuan", new String[]{"元","原","远","园","员"});
-        map.put("yue", new String[]{"月","越","约","乐","跃"});
-        map.put("yun", new String[]{"云","运","允","韵","孕"});
-        map.put("za", new String[]{"杂","砸","咋","匝"});
-        map.put("zai", new String[]{"在","再","载","灾","栽"});
-        map.put("zan", new String[]{"咱","暂","赞","攒"});
-        map.put("zang", new String[]{"脏","葬","藏","臧"});
-        map.put("zao", new String[]{"早","造","找","遭","糟"});
-        map.put("ze", new String[]{"则","责","择","泽","仄"});
-        map.put("zei", new String[]{"贼"});
-        map.put("zen", new String[]{"怎","谮"});
-        map.put("zeng", new String[]{"增","曾","赠","憎"});
-        map.put("zha", new String[]{"扎","炸","渣","眨","栅"});
-        map.put("zhai", new String[]{"摘","窄","宅","债","寨"});
-        map.put("zhan", new String[]{"站","战","占","展","粘"});
-        map.put("zhang", new String[]{"张","长","章","掌","涨"});
-        map.put("zhao", new String[]{"找","照","招","赵","召"});
-        map.put("zhe", new String[]{"这","着","者","哲","折"});
-        map.put("zhei", new String[]{"这"});
-        map.put("zhen", new String[]{"真","针","镇","阵","振"});
-        map.put("zheng", new String[]{"正","整","政","证","征"});
-        map.put("zhi", new String[]{"只","知","之","直","至"});
-        map.put("zhong", new String[]{"中","种","重","众","钟"});
-        map.put("zhou", new String[]{"周","州","洲","舟","粥"});
-        map.put("zhu", new String[]{"主","住","注","猪","竹"});
-        map.put("zhua", new String[]{"抓","爪"});
-        map.put("zhuai", new String[]{"拽","转"});
-        map.put("zhuan", new String[]{"转","专","赚","砖","撰"});
-        map.put("zhuang", new String[]{"装","状","壮","撞","庄"});
-        map.put("zhui", new String[]{"追","坠","缀","锥"});
-        map.put("zhun", new String[]{"准","谆"});
-        map.put("zhuo", new String[]{"着","桌","捉","拙","灼"});
-        map.put("zi", new String[]{"子","自","字","紫","资"});
-        map.put("zong", new String[]{"总","宗","综","踪","纵"});
-        map.put("zou", new String[]{"走","奏","揍","邹"});
-        map.put("zu", new String[]{"足","组","族","阻","祖"});
-        map.put("zuan", new String[]{"钻","躜","纂"});
-        map.put("zui", new String[]{"最","嘴","醉","罪"});
-        map.put("zun", new String[]{"尊","遵","樽"});
-        map.put("zuo", new String[]{"做","作","坐","左","座"});
+    private void switchToHandwriting() {
+        currentMode = MODE_HANDWRITING;
+        // 创建手写面板
+        LinearLayout hwLayout = new LinearLayout(this);
+        hwLayout.setOrientation(LinearLayout.VERTICAL);
+        hwLayout.setBackgroundColor(Color.WHITE);
 
-        String[] result = map.get(pinyin);
-        if (result != null) return result;
-        return new String[]{};
+        // 标题栏
+        LinearLayout titleBar = new LinearLayout(this);
+        titleBar.setOrientation(LinearLayout.HORIZONTAL);
+        titleBar.setPadding(16, 12, 16, 12);
+        titleBar.setBackgroundColor(Color.parseColor("#F2F2F7"));
+
+        TextView title = new TextView(this);
+        title.setText("手写输入");
+        title.setTextSize(15);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        titleBar.addView(title);
+
+        Button backBtn = new Button(this);
+        backBtn.setText("ABC");
+        backBtn.setTextSize(13);
+        backBtn.setOnClickListener(v -> {
+            currentMode = MODE_QWERTY;
+            keyboardView.setKeyboard(qwertyKeyboard);
+            setContentView(getLayoutInflater().inflate(android.R.layout.simple_list_item_1, null));
+            onCreateInputView();
+        });
+        titleBar.addView(backBtn);
+        hwLayout.addView(titleBar);
+
+        // 手写区域（简化为常用字快捷面板）
+        ScrollView scrollView = new ScrollView(this);
+        LinearLayout hwArea = new LinearLayout(this);
+        hwArea.setOrientation(LinearLayout.VERTICAL);
+        hwArea.setPadding(16, 16, 16, 16);
+
+        // 常用字
+        TextView label = new TextView(this);
+        label.setText("常用字（点击输入）");
+        label.setTextSize(13);
+        label.setTextColor(Color.GRAY);
+        hwArea.addView(label);
+
+        String[] commonChars = {"的", "一", "是", "不", "了", "在", "人", "有", "我", "他",
+                "这", "个", "们", "中", "来", "上", "大", "为", "和", "国",
+                "地", "到", "以", "说", "时", "要", "就", "出", "会", "可",
+                "你", "对", "生", "能", "而", "子", "那", "得", "于", "着",
+                "下", "自", "之", "年", "过", "发", "后", "作", "里", "用",
+                "道", "行", "所", "然", "家", "种", "事", "成", "方", "多",
+                "经", "么", "去", "法", "学", "如", "都", "同", "现", "当",
+                "没", "动", "面", "起", "看", "定", "天", "分", "还", "进",
+                "好", "小", "部", "其", "些", "主", "样", "理", "心", "她",
+                "本", "前", "开", "但", "因", "只", "从", "想", "实", "日"};
+
+        LinearLayout charGrid = new LinearLayout(this);
+        charGrid.setOrientation(LinearLayout.VERTICAL);
+        for (int row = 0; row < 10; row++) {
+            LinearLayout rowLayout = new LinearLayout(this);
+            rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+            for (int col = 0; col < 10; col++) {
+                final String ch = commonChars[row * 10 + col];
+                Button charBtn = new Button(this);
+                charBtn.setText(ch);
+                charBtn.setTextSize(18);
+                charBtn.setBackgroundColor(Color.parseColor("#F2F2F7"));
+                charBtn.setPadding(8, 12, 8, 12);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+                params.setMargins(2, 2, 2, 2);
+                charBtn.setLayoutParams(params);
+                charBtn.setOnClickListener(v -> {
+                    InputConnection ic = getCurrentInputConnection();
+                    if (ic != null) {
+                        ic.commitText(ch, 1);
+                        handwritingHistory.add(ch);
+                        if (handwritingHistory.size() > 50) {
+                            handwritingHistory.remove(0);
+                        }
+                    }
+                });
+                rowLayout.addView(charBtn);
+            }
+            charGrid.addView(rowLayout);
+        }
+        hwArea.addView(charGrid);
+
+        // 历史记录
+        if (!handwritingHistory.isEmpty()) {
+            TextView histLabel = new TextView(this);
+            histLabel.setText("最近输入");
+            histLabel.setTextSize(13);
+            histLabel.setTextColor(Color.GRAY);
+            histLabel.setPadding(0, 16, 0, 8);
+            hwArea.addView(histLabel);
+
+            StringBuilder histText = new StringBuilder();
+            for (int i = handwritingHistory.size() - 1; i >= 0; i--) {
+                histText.append(handwritingHistory.get(i));
+            }
+            TextView histView = new TextView(this);
+            histView.setText(histText.toString());
+            histView.setTextSize(18);
+            histView.setPadding(8, 8, 8, 8);
+            histView.setBackgroundColor(Color.parseColor("#F2F2F7"));
+            hwArea.addView(histView);
+        }
+
+        scrollView.addView(hwArea);
+        hwLayout.addView(scrollView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+
+        // 替换键盘视图
+        if (keyboardView.getParent() != null) {
+            ((android.view.ViewGroup) keyboardView.getParent()).removeView(keyboardView);
+        }
+        ((android.view.ViewGroup) candidateBar.getParent()).addView(hwLayout);
+        candidateBar.setVisibility(View.GONE);
     }
 
-    private void commitText(String text) {
-        getCurrentInputConnection().commitText(text, 1);
+    private void switchToEmoji() {
+        currentMode = MODE_EMOJI;
+        // 简化：直接输入一些常用emoji
+        String[] emojis = {"😀", "😂", "🥰", "😎", "🤔", "😴", "😭", "😡",
+                "👍", "👏", "🙏", "💪", "❤️", "🔥", "✨", "🎉",
+                "☀️", "🌙", "⭐", "🌈", "🍎", "🍕", "☕", "🍺"};
+
+        LinearLayout emojiLayout = new LinearLayout(this);
+        emojiLayout.setOrientation(LinearLayout.VERTICAL);
+        emojiLayout.setBackgroundColor(Color.WHITE);
+
+        // 标题栏
+        LinearLayout titleBar = new LinearLayout(this);
+        titleBar.setOrientation(LinearLayout.HORIZONTAL);
+        titleBar.setPadding(16, 12, 16, 12);
+        titleBar.setBackgroundColor(Color.parseColor("#F2F2F7"));
+
+        TextView title = new TextView(this);
+        title.setText("表情");
+        title.setTextSize(15);
+        title.setTypeface(null, Typeface.BOLD);
+        title.setLayoutParams(new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+        titleBar.addView(title);
+
+        Button backBtn = new Button(this);
+        backBtn.setText("ABC");
+        backBtn.setTextSize(13);
+        backBtn.setOnClickListener(v -> {
+            currentMode = MODE_QWERTY;
+            keyboardView.setKeyboard(qwertyKeyboard);
+            if (keyboardView.getParent() == null) {
+                ((android.view.ViewGroup) candidateBar.getParent()).addView(keyboardView);
+            }
+            if (emojiLayout.getParent() != null) {
+                ((android.view.ViewGroup) emojiLayout.getParent()).removeView(emojiLayout);
+            }
+        });
+        titleBar.addView(backBtn);
+        emojiLayout.addView(titleBar);
+
+        // Emoji网格
+        ScrollView scrollView = new ScrollView(this);
+        LinearLayout emojiGrid = new LinearLayout(this);
+        emojiGrid.setOrientation(LinearLayout.VERTICAL);
+        emojiGrid.setPadding(16, 16, 16, 16);
+
+        for (int row = 0; row < 6; row++) {
+            LinearLayout rowLayout = new LinearLayout(this);
+            rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+            for (int col = 0; col < 4; col++) {
+                final String emoji = emojis[row * 4 + col];
+                Button emojiBtn = new Button(this);
+                emojiBtn.setText(emoji);
+                emojiBtn.setTextSize(24);
+                emojiBtn.setBackgroundColor(Color.TRANSPARENT);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1);
+                emojiBtn.setLayoutParams(params);
+                emojiBtn.setOnClickListener(v -> {
+                    InputConnection ic = getCurrentInputConnection();
+                    if (ic != null) {
+                        ic.commitText(emoji, 1);
+                    }
+                });
+                rowLayout.addView(emojiBtn);
+            }
+            emojiGrid.addView(rowLayout);
+        }
+        scrollView.addView(emojiGrid);
+        emojiLayout.addView(scrollView, new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT, 0, 1));
+
+        // 替换键盘视图
+        if (keyboardView.getParent() != null) {
+            ((android.view.ViewGroup) keyboardView.getParent()).removeView(keyboardView);
+        }
+        ((android.view.ViewGroup) candidateBar.getParent()).addView(emojiLayout);
+        candidateBar.setVisibility(View.GONE);
     }
 
     @Override
     public void onPress(int primaryCode) {}
+
     @Override
     public void onRelease(int primaryCode) {}
+
     @Override
     public void onText(CharSequence text) {}
+
     @Override
     public void swipeLeft() {}
+
     @Override
     public void swipeRight() {}
+
     @Override
     public void swipeDown() {}
+
     @Override
     public void swipeUp() {}
 }
