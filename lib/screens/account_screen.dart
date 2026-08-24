@@ -58,13 +58,6 @@ class _AccountScreenState extends State<AccountScreen> {
                   ),
                   if (_isRegister) ...[
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _inviteController,
-                      decoration: const InputDecoration(
-                        labelText: '邀请码',
-                        prefixIcon: Icon(Icons.card_giftcard),
-                      ),
-                    ),
                   ],
                   const SizedBox(height: 20),
                   SizedBox(
@@ -77,7 +70,7 @@ class _AccountScreenState extends State<AccountScreen> {
                           success = await api.register(
                             _usernameController.text,
                             _passwordController.text,
-                            _inviteController.text,
+                            '',
                           );
                         } else {
                           success = await api.login(

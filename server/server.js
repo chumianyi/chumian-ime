@@ -6,13 +6,12 @@ const path = require('path');
 
 const PORT = 24512;
 const HOST = '0.0.0.0';
+const ADMIN_KEY = 'chumian_ime_admin_2024';
 
-// 数据存储
 const DATA_DIR = path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 const usersFile = path.join(DATA_DIR, 'users.json');
-const skinsFile = path.join(DATA_DIR, 'skins.json');
 const statsFile = path.join(DATA_DIR, 'stats.json');
 const signinsFile = path.join(DATA_DIR, 'signins.json');
 
@@ -20,23 +19,35 @@ let users = JSON.parse(fs.existsSync(usersFile) ? fs.readFileSync(usersFile) : '
 let stats = JSON.parse(fs.existsSync(statsFile) ? fs.readFileSync(statsFile) : '{}');
 let signins = JSON.parse(fs.existsSync(signinsFile) ? fs.readFileSync(signinsFile) : '{}');
 
-// 皮肤数据
+// 25款皮肤（4免费 + 21顶级）
 const skins = [
   { id: 'aurora', name: '极光紫', colors: [0xFF6C5CE7, 0xFFA29BFE], price: 0 },
   { id: 'sakura', name: '樱花粉', colors: [0xFFFF9A9E, 0xFFFAD0C4], price: 0 },
   { id: 'ocean', name: '海洋蓝', colors: [0xFF4FACFE, 0xFF00F2FE], price: 0 },
   { id: 'forest', name: '森林绿', colors: [0xFF43E97B, 0xFF38F9D7], price: 0 },
-  { id: 'sunset', name: '日落橙', colors: [0xFFFF6B6B, 0xFFFECA57], price: 1 },
-  { id: 'starry', name: '星空黑', colors: [0xFF2D3436, 0xFF636E72], price: 1 },
-  { id: 'mint', name: '薄荷青', colors: [0xFF00B894, 0xFF55EFC4], price: 1 },
-  { id: 'rosegold', name: '玫瑰金', colors: [0xFFE17055, 0xFFFAB1A0], price: 1 },
-  { id: 'lavender', name: '薰衣草', colors: [0xFFA29BFE, 0xFFD6A2E8], price: 1 },
-  { id: 'coral', name: '珊瑚红', colors: [0xFFFF7675, 0xFFFF9FF3], price: 1 },
-  { id: 'emerald', name: '翡翠绿', colors: [0xFF00CEC9, 0xFF81ECEC], price: 1 },
-  { id: 'royal', name: '皇家蓝', colors: [0xFF0984E3, 0xFF74B9FF], price: 1 },
+  { id: 'galaxy', name: '星河璀璨', colors: [0xFF0F0C29, 0xFF302B63, 0xFF24243E], price: 10 },
+  { id: 'sunset', name: '落日熔金', colors: [0xFFFF512F, 0xFFF09819], price: 10 },
+  { id: 'neon', name: '霓虹都市', colors: [0xFFFC00FF, 0xFF00DBDE], price: 10 },
+  { id: 'peach', name: '蜜桃甜心', colors: [0xFFED4264, 0xFFFFEDBC], price: 10 },
+  { id: 'midnight', name: '午夜深蓝', colors: [0xFF000428, 0xFF004E92], price: 10 },
+  { id: 'candy', name: '糖果缤纷', colors: [0xFFFF6B6B, 0xFF4ECDC4, 0xFF45B7D1], price: 10 },
+  { id: 'royal', name: '皇家金紫', colors: [0xFF8E2DE2, 0xFF4A00E0], price: 10 },
+  { id: 'mint', name: '薄荷清凉', colors: [0xFF00B894, 0xFF55EFC4], price: 10 },
+  { id: 'lavender', name: '薰衣草梦', colors: [0xFFA29BFE, 0xFFD6A2E8], price: 10 },
+  { id: 'coral', name: '珊瑚海韵', colors: [0xFFFF7675, 0xFFFF9FF3], price: 10 },
+  { id: 'emerald', name: '翡翠秘境', colors: [0xFF00CEC9, 0xFF81ECEC], price: 10 },
+  { id: 'amber', name: '琥珀流光', colors: [0xFFF7971E, 0xFFFFD200], price: 10 },
+  { id: 'rose', name: '玫瑰金韵', colors: [0xFFE17055, 0xFFFAB1A0], price: 10 },
+  { id: 'cyber', name: '赛博朋克', colors: [0xFF0F2027, 0xFF203A43, 0xFF2C5364], price: 10 },
+  { id: 'dream', name: '梦幻紫霞', colors: [0xFFDA22FF, 0xFF9733EE], price: 10 },
+  { id: 'ice', name: '冰雪奇缘', colors: [0xFFE0EAFC, 0xFFCFDEF3], price: 10 },
+  { id: 'fire', name: '烈焰红唇', colors: [0xFFF12711, 0xFFF5AF19], price: 10 },
+  { id: 'starry', name: '星空漫步', colors: [0xFF232526, 0xFF414345], price: 10 },
+  { id: 'rainbow', name: '彩虹天堂', colors: [0xFFFF0080, 0xFFFF8C00, 0xFFFFD700, 0xFF00FF7F, 0xFF00BFFF, 0xFF9400D3], price: 10 },
+  { id: 'velvet', name: '丝绒酒红', colors: [0xFF642B73, 0xFFC6426E], price: 10 },
+  { id: 'platinum', name: '铂金奢华', colors: [0xFFE5E5E5, 0xFFFFFFFF, 0xFFCCCCCC], price: 10 },
 ];
 
-// 词库数据
 const dictionaries = [
   { id: 'basic', name: '基础词库', desc: '常用汉字和词语', size: '2.3MB', words: 50000 },
   { id: 'internet', name: '网络流行词', desc: '最新网络用语和梗', size: '1.2MB', words: 20000 },
@@ -102,16 +113,11 @@ server.on('message', (msg, rinfo) => {
 
   try {
     switch (action) {
+      // 注册（无需邀请码）
       case 'register': {
-        const { username, password, invite_code } = data;
-        if (!username || !password || !invite_code) {
-          response = { error: '缺少参数' };
-          break;
-        }
-        if (users[username]) {
-          response = { error: '用户名已存在' };
-          break;
-        }
+        const { username, password } = data;
+        if (!username || !password) { response = { error: '缺少参数' }; break; }
+        if (users[username]) { response = { error: '用户名已存在' }; break; }
         const token = generateToken(username);
         users[username] = {
           password: hashPassword(password),
@@ -119,6 +125,8 @@ server.on('message', (msg, rinfo) => {
           meow_coins: 0,
           owned_skins: ['aurora', 'sakura', 'ocean', 'forest'],
           created_at: Date.now(),
+          banned: false,
+          banned_until: 0,
         };
         stats[username] = { total_chars: 0, total_inputs: 0, accuracy: 100 };
         saveData();
@@ -163,10 +171,7 @@ server.on('message', (msg, rinfo) => {
         const username = verifyToken(data.token);
         const owned = username ? users[username].owned_skins : [];
         response = {
-          skins: skins.map(s => ({
-            ...s,
-            owned: owned.includes(s.id),
-          })),
+          skins: skins.map(s => ({ ...s, owned: owned.includes(s.id) })),
         };
         break;
       }
@@ -215,7 +220,71 @@ server.on('message', (msg, rinfo) => {
       }
 
       case 'check_update': {
-        response = { has_update: false, latest_version: '1.0.0' };
+        response = { has_update: false, latest_version: '1.1.0' };
+        break;
+      }
+
+      // ========== 管理端API ==========
+      case 'admin_login': {
+        if (data.admin_key !== ADMIN_KEY) {
+          response = { error: '管理密钥错误' };
+          break;
+        }
+        const adminToken = crypto.createHash('sha256').update('admin' + Date.now()).digest('hex');
+        response = { success: true, admin_token: adminToken };
+        break;
+      }
+
+      case 'admin_users': {
+        if (data.admin_key !== ADMIN_KEY) { response = { error: '无权限' }; break; }
+        const userList = Object.entries(users).map(([name, u]) => ({
+          username: name,
+          meow_coins: u.meow_coins,
+          owned_skins: u.owned_skins.length,
+          created_at: u.created_at,
+          banned: u.banned,
+          banned_until: u.banned_until,
+        }));
+        response = { users: userList, total: userList.length };
+        break;
+      }
+
+      case 'admin_ban': {
+        if (data.admin_key !== ADMIN_KEY) { response = { error: '无权限' }; break; }
+        const { username, days } = data;
+        if (!users[username]) { response = { error: '用户不存在' }; break; }
+        users[username].banned = true;
+        users[username].banned_until = days > 0 ? Date.now() + days * 86400000 : Date.now() + 315360000000;
+        saveData();
+        response = { success: true, message: `已封禁 ${username} ${days > 0 ? days + '天' : '永久'}` };
+        break;
+      }
+
+      case 'admin_unban': {
+        if (data.admin_key !== ADMIN_KEY) { response = { error: '无权限' }; break; }
+        const { username } = data;
+        if (!users[username]) { response = { error: '用户不存在' }; break; }
+        users[username].banned = false;
+        users[username].banned_until = 0;
+        saveData();
+        response = { success: true, message: `已解封 ${username}` };
+        break;
+      }
+
+      case 'admin_overview': {
+        if (data.admin_key !== ADMIN_KEY) { response = { error: '无权限' }; break; }
+        const totalUsers = Object.keys(users).length;
+        const totalChars = Object.values(stats).reduce((sum, s) => sum + (s.total_chars || 0), 0);
+        const totalSkinsSold = Object.values(users).reduce((sum, u) => sum + Math.max(0, u.owned_skins.length - 4), 0);
+        const totalCoins = Object.values(users).reduce((sum, u) => sum + (u.meow_coins || 0), 0);
+        response = {
+          total_users: totalUsers,
+          total_chars: totalChars,
+          total_skins_sold: totalSkinsSold,
+          total_coins: totalCoins,
+          skins_count: skins.length,
+          dictionaries_count: dictionaries.length,
+        };
         break;
       }
 

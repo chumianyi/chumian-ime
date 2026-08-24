@@ -71,12 +71,11 @@ class ApiService extends ChangeNotifier {
     }
   }
 
-  // 注册
+  // 注册（无需邀请码）
   Future<bool> register(String username, String password, String inviteCode) async {
     final result = await _request('/api/register', body: {
       'username': username,
       'password': password,
-      'invite_code': inviteCode,
     });
     if (result['token'] != null) {
       _token = result['token'];
